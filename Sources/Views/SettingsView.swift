@@ -38,7 +38,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: AppTheme.sectionSpacing) {
                 // ── Page heading ──────────────────────────────────────────
                 Text("Settings")
-                    .font(.largeTitle)
+                    .font(AppTheme.dataHeaderFont)
                     .fontWeight(.bold)
                     .foregroundStyle(AppTheme.textPrimary)
                     .padding(.bottom, 8)
@@ -98,7 +98,7 @@ struct SettingsView: View {
             HStack(spacing: 16) {
                 // Selection indicator
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
+                    .font(.title3)
                     .foregroundStyle(isSelected ? AppTheme.candleUp : AppTheme.textSecondary)
                     .frame(width: 32)
 
@@ -109,7 +109,7 @@ struct SettingsView: View {
                         .fontWeight(isSelected ? .semibold : .regular)
 
                     Text(subtitle)
-                        .font(.callout)
+                        .font(AppTheme.dataFont)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
 
@@ -132,7 +132,7 @@ struct SettingsView: View {
             sectionHeader("Default Timeframe", icon: "clock")
 
             Text("Applied on next app launch — does not change the live chart.")
-                .font(.callout)
+                .font(AppTheme.dataFont)
                 .foregroundStyle(AppTheme.textSecondary)
 
             LazyVGrid(
@@ -245,15 +245,15 @@ struct SettingsView: View {
                 HStack(spacing: 8) {
                     if alert.hasTriggered {
                         Label("Fired", systemImage: "bell.fill")
-                            .font(.callout)
+                            .font(AppTheme.dataFont)
                             .foregroundStyle(AppTheme.alertBanner)
                     } else if alert.isEnabled {
                         Label("Armed", systemImage: "bell")
-                            .font(.callout)
+                            .font(AppTheme.dataFont)
                             .foregroundStyle(AppTheme.stateConnected)
                     } else {
                         Label("Disabled", systemImage: "bell.slash")
-                            .font(.callout)
+                            .font(AppTheme.dataFont)
                             .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
@@ -267,7 +267,7 @@ struct SettingsView: View {
                     alertStore.resetAlert(id: alert.id)
                 } label: {
                     Text("Re-arm")
-                        .font(.callout)
+                        .font(AppTheme.dataFont)
                         .foregroundStyle(AppTheme.strcAccent)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
@@ -332,7 +332,7 @@ struct SettingsView: View {
     @ViewBuilder
     private func sectionHeader(_ title: String, icon: String) -> some View {
         Label(title, systemImage: icon)
-            .font(AppTheme.headlineFont)
+            .font(AppTheme.dataHeaderFont)
             .foregroundStyle(AppTheme.textPrimary)
     }
 }
