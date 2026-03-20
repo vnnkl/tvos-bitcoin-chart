@@ -56,7 +56,7 @@ struct LatestPrice: Codable, Sendable {
     let close: Double
     let high: Double
     let low: Double
-    let volume: Int
+    let volume: Double
     /// `"regular"` | `"extended"` | `"pre"` etc.
     let source: String
 }
@@ -111,6 +111,6 @@ struct PriceBar: Codable, Sendable {
     let close: Double
     let high: Double
     let low: Double
-    let volume: Int
+    let volume: Double
     let source: String
 }

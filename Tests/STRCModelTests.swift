@@ -120,7 +120,7 @@ struct STRCTickerDataTests {
         #expect(strc.latest.close == 18.45)
         #expect(strc.latest.high == 18.90)
         #expect(strc.latest.low == 17.80)
-        #expect(strc.latest.volume == 2_450_000)
+        #expect(strc.latest.volume == 2_450_000.0)
         #expect(strc.latest.source == "regular")
     }
 
@@ -246,6 +246,52 @@ struct STRCTickerDataTests {
         #expect(strc.summary.exDividendDate == nil)
         #expect(strc.dividends.current == nil)
         #expect(strc.dividends.history == nil)
+    }
+
+    @Test("Decodes fractional volume in history bar")
+    func decodesFractionalVolumeInHistoryBar() throws {
+        let json = """
+        {
+          "success": true,
+          "updated": "2026-03-20T05:00:00.000Z",
+          "btcPrice": 84321.50,
+          "marketStatus": { "market": "open", "afterHours": false, "earlyHours": false },
+          "tickers": {
+            "STRC": {
+              "ipoDate": "2024-06-17",
+              "closePrice": 18.45,
+              "previousClose": 18.20,
+              "latest": {
+                "date": "2026-03-20",
+                "close": 18.45,
+                "high": 18.90,
+                "low": 17.80,
+                "volume": 2450000,
+                "source": "regular"
+              },
+              "summary": {},
+              "dividends": {},
+              "history": [
+                {
+                  "date": "2026-03-19",
+                  "close": 18.20,
+                  "high": 18.50,
+                  "low": 17.90,
+                  "volume": 774898.460196,
+                  "source": "regular"
+                }
+              ]
+            }
+          }
+        }
+        """.data(using: .utf8)!
+        let decoder = makeDecoder()
+        let response = try decoder.decode(STRCTickerResponse.self, from: json)
+        let strc = try #require(response.tickers["STRC"])
+        let history = try #require(strc.history)
+        #expect(history.count == 1)
+        let bar = history[0]
+        #expect(bar.volume == 774898.460196)
     }
 }
 
