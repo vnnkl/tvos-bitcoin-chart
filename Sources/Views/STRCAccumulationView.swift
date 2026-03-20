@@ -28,6 +28,7 @@ struct STRCAccumulationView: View {
 
     private static let btcFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
+        f.locale = Locale(identifier: "en_US")
         f.numberStyle = .decimal
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 4
@@ -38,6 +39,7 @@ struct STRCAccumulationView: View {
 
     private static let proceedsFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
+        f.locale = Locale(identifier: "en_US")
         f.numberStyle = .currency
         f.currencyCode = "USD"
         f.minimumFractionDigits = 1
@@ -48,6 +50,7 @@ struct STRCAccumulationView: View {
 
     private static let sharesFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
+        f.locale = Locale(identifier: "en_US")
         f.numberStyle = .decimal
         f.usesGroupingSeparator = true
         f.maximumFractionDigits = 0

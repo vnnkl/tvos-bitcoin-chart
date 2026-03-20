@@ -13,6 +13,7 @@ struct PriceTickerView: View {
 
     private static let priceFormatter: NumberFormatter = {
         let formatter: NumberFormatter = .init()
+        formatter.locale = Locale(identifier: "en_US")
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = 2
         formatter.maximumFractionDigits = 2
@@ -23,6 +24,7 @@ struct PriceTickerView: View {
 
     private static let changeFormatter: NumberFormatter = {
         let formatter: NumberFormatter = .init()
+        formatter.locale = Locale(identifier: "en_US")
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = 2
         formatter.maximumFractionDigits = 2

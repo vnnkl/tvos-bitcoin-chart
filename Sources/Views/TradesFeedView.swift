@@ -16,6 +16,7 @@ struct TradesFeedView: View {
 
     private static let priceFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
+        f.locale = Locale(identifier: "en_US")
         f.numberStyle = .decimal
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 2
@@ -26,6 +27,7 @@ struct TradesFeedView: View {
 
     private static let qtyFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
+        f.locale = Locale(identifier: "en_US")
         f.numberStyle = .decimal
         f.minimumFractionDigits = 4
         f.maximumFractionDigits = 4

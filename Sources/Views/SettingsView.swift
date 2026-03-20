@@ -123,6 +123,7 @@ struct SettingsView: View {
             )
         }
         .buttonStyle(.plain)
+        .focusEffectDisabled()
     }
 
     // MARK: - Timeframe Section
@@ -169,6 +170,7 @@ struct SettingsView: View {
                 )
         }
         .buttonStyle(.plain)
+        .focusEffectDisabled()
     }
 
     // MARK: - Alerts Section
@@ -227,6 +229,7 @@ struct SettingsView: View {
                 )
         }
         .buttonStyle(.plain)
+        .focusEffectDisabled()
     }
 
     @ViewBuilder
@@ -277,6 +280,7 @@ struct SettingsView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .focusEffectDisabled()
             }
 
             // Delete button
@@ -294,6 +298,7 @@ struct SettingsView: View {
                     )
             }
             .buttonStyle(.plain)
+            .focusEffectDisabled()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

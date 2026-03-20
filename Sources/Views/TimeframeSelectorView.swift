@@ -48,6 +48,7 @@ struct TimeframeSelectorView: View {
                 )
         }
         .buttonStyle(.plain)
+        .focusEffectDisabled()
         .focused($focusedInterval, equals: interval)
         .scaleEffect(isFocused ? 1.15 : 1.0)
         .animation(.easeInOut(duration: 0.15), value: isFocused)

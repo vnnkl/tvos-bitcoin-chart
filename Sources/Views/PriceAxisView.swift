@@ -105,6 +105,7 @@ struct PriceAxisView: View {
 
     private static let priceFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
+        f.locale = Locale(identifier: "en_US")
         f.numberStyle = .decimal
         f.minimumFractionDigits = 0
         f.maximumFractionDigits = 0

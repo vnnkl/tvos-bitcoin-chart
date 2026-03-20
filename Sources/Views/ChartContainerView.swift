@@ -178,6 +178,7 @@ struct ChartContainerView: View {
                             .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.12)))
                     }
                     .buttonStyle(.plain)
+                    .focusEffectDisabled()
                     .disabled(viewModel.zoomLevel <= -3)
 
                     Button { viewModel.zoomIn() } label: {
@@ -188,6 +189,7 @@ struct ChartContainerView: View {
                             .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.12)))
                     }
                     .buttonStyle(.plain)
+                    .focusEffectDisabled()
                     .disabled(viewModel.zoomLevel >= 5)
                 }
 
@@ -267,6 +269,7 @@ struct ChartContainerView: View {
                 )
         }
         .buttonStyle(.plain)
+        .focusEffectDisabled()
         .focused($focusedMode, equals: mode)
         .scaleEffect(isFocused ? 1.15 : 1.0)
         .animation(.easeInOut(duration: 0.15), value: isFocused)
@@ -364,6 +367,7 @@ struct ChartContainerView: View {
 
     private static let priceFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
+        f.locale = Locale(identifier: "en_US")
         f.numberStyle = .decimal
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 2
@@ -374,6 +378,7 @@ struct ChartContainerView: View {
 
     private static let changeFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
+        f.locale = Locale(identifier: "en_US")
         f.numberStyle = .decimal
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 2

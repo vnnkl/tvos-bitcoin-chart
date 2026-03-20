@@ -15,6 +15,7 @@ struct STRCStatusCardView: View {
 
     private static let currencyFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
+        f.locale = Locale(identifier: "en_US")
         f.numberStyle = .currency
         f.currencyCode = "USD"
         f.minimumFractionDigits = 2
@@ -24,6 +25,7 @@ struct STRCStatusCardView: View {
 
     private static let percentFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
+        f.locale = Locale(identifier: "en_US")
         f.numberStyle = .percent
         f.minimumFractionDigits = 1
         f.maximumFractionDigits = 2
