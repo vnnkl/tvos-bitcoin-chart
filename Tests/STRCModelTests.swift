@@ -165,6 +165,49 @@ struct STRCTickerDataTests {
         #expect(strc.extendedHoursChangePercent == 0.27)
     }
 
+    // R029: SATA ticker returns btcCorrelation object with null current and no windowDays key.
+    // JSONDecoder must not throw — both inner fields are optional.
+    @Test("SATA btcCorrelation with null current and missing windowDays decodes")
+    func decodesSataBtcCorrelationNullFields() throws {
+        let json = """
+        {
+          "success": true,
+          "updated": "2026-03-20T05:00:00.000Z",
+          "btcPrice": 84000.0,
+          "marketStatus": { "market": "open", "afterHours": false, "earlyHours": false },
+          "tickers": {
+            "SATA": {
+              "ipoDate": "2024-01-01",
+              "closePrice": 5.00,
+              "previousClose": 4.90,
+              "latest": {
+                "date": "2026-03-20",
+                "close": 5.00,
+                "high": 5.10,
+                "low": 4.80,
+                "volume": 500000,
+                "source": "regular"
+              },
+              "summary": {},
+              "dividends": {},
+              "btcCorrelation": {
+                "current": null,
+                "history": []
+              }
+            }
+          }
+        }
+        """.data(using: .utf8)!
+        let decoder = makeDecoder()
+        let response = try decoder.decode(STRCTickerResponse.self, from: json)
+        let sata = try #require(response.tickers["SATA"])
+        // btcCorrelation wrapper is present
+        let corr = try #require(sata.btcCorrelation)
+        // Inner fields must be nil, not cause a decode failure
+        #expect(corr.current == nil)
+        #expect(corr.windowDays == nil)
+    }
+
     @Test("Missing optional fields decode without error")
     func decodesWithMissingOptionalFields() throws {
         let json = """
