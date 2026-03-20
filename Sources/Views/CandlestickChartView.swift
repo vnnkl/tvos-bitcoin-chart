@@ -62,24 +62,28 @@ struct CandlestickChartView: View {
 
 private extension CandlestickChartView {
 
-    /// Finds the minimum low and price range across all klines, with 5 % padding.
-    func priceExtents(_ klines: [Kline]) -> (min: CGFloat, range: CGFloat) {
-        let lows   = klines.map { NSDecimalNumber(decimal: $0.low).doubleValue }
-        let highs  = klines.map { NSDecimalNumber(decimal: $0.high).doubleValue }
-        let rawMin = lows.min()  ?? 0
-        let rawMax = highs.max() ?? 1
-        let pad    = (rawMax - rawMin) * 0.05
-        let lo     = rawMin - pad
-        let hi     = rawMax + pad
-        return (CGFloat(lo), CGFloat(max(hi - lo, 1)))
-    }
-
     /// Maps a price value to a Y coordinate in the canvas.
     /// `min` and `range` come from `priceExtents` (already padded).
     func priceY(_ price: Decimal, in height: CGFloat, min: CGFloat, range: CGFloat) -> CGFloat {
         let p = CGFloat(NSDecimalNumber(decimal: price).doubleValue)
         return height - ((p - min) / range) * height
     }
+}
+
+/// Finds the minimum low and price range across all klines, with 5 % padding.
+///
+/// This is a free function rather than a method so both `CandlestickChartView` and
+/// `ChartContainerView` can call it to derive the same padded price extents,
+/// ensuring the heatmap and candlestick Y-axes are identical.
+func priceExtents(_ klines: [Kline]) -> (min: CGFloat, range: CGFloat) {
+    let lows   = klines.map { NSDecimalNumber(decimal: $0.low).doubleValue }
+    let highs  = klines.map { NSDecimalNumber(decimal: $0.high).doubleValue }
+    let rawMin = lows.min()  ?? 0
+    let rawMax = highs.max() ?? 1
+    let pad    = (rawMax - rawMin) * 0.05
+    let lo     = rawMin - pad
+    let hi     = rawMax + pad
+    return (CGFloat(lo), CGFloat(max(hi - lo, 1)))
 }
 
 // MARK: - Layout helper

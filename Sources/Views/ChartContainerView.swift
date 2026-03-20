@@ -92,12 +92,25 @@ struct ChartContainerView: View {
 
     @ViewBuilder
     private var chartArea: some View {
+        let klines = viewModel.klineStore.klines
+        let (pMin, pRange) = priceExtents(klines)
+
         ZStack {
+            // Thermal heatmap renders first (behind candlesticks/line chart).
+            // klineCount is intentionally from klineStore — not orderBookStore.snapshots.count —
+            // so the X-axis columns align 1:1 with candlestick slots.
+            DepthHeatmapView(
+                snapshots: viewModel.orderBookStore.snapshots,
+                klineCount: max(klines.count, 1),
+                priceMin: pMin,
+                priceRange: pRange
+            )
+
             switch viewModel.chartMode {
             case .candlestick:
-                CandlestickChartView(klines: viewModel.klineStore.klines)
+                CandlestickChartView(klines: klines)
             case .line:
-                LineChartView(klines: viewModel.klineStore.klines)
+                LineChartView(klines: klines)
             }
 
             if viewModel.isLoading {
