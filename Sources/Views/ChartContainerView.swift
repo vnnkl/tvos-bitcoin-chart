@@ -1,61 +1,62 @@
 import SwiftUI
 
-/// Composes the full chart UI into a terminal-style layout:
+/// Full trading terminal layout — industrial precision for a 55"+ screen.
 ///
 /// ```
-/// ┌────────────────────────────────────────────────────────┐
-/// │  [price/change]  [── timeframe bar ──]  [mode][status] │  ← header row
-/// ├──────────────────────────────────┬─────────────────────┤
-/// │                                  │  Order Book         │
-/// │  Chart (candlestick / line)      │  ─────────────────  │
-/// │  + heatmap overlay               │  Recent Trades      │
-/// │  + volume bars (bottom 20 %)     │                     │
-/// └──────────────────────────────────┴─────────────────────┘
-///                                    ▲ 340 pt fixed sidebar
+/// ┌──────────────────────────────────────────────────────────────────────┐
+/// │  BTC/USDT  71,234.56  +2.41%  │  1m 3m 5m … 1w  │  Candlestick ● │ ← compact header
+/// ├──────────────────────────────────────────┬────────────────────────────┤
+/// │                                          │ PRICE       QTY    TOTAL │
+/// │                                          │ 71,235.10   0.42   1.89  │ ← asks (red)
+/// │  Candlestick / Line chart                │ 71,235.00   0.18   1.47  │
+/// │  + depth heatmap behind                  │ ── Spread: 0.10 ──────── │
+/// │  + volume bars (bottom 18%)              │ 71,234.90   0.55   2.01  │ ← bids (green)
+/// │                                          │ 71,234.80   0.33   1.46  │
+/// │                                          ├──────────────────────────│
+/// │                                          │ TIME      PRICE     QTY  │
+/// │                                          │ 09:41:23  71235.1  0.02  │ ← trades
+/// └──────────────────────────────────────────┴────────────────────────────┘
+///                                            ▲ 420 pt sidebar
 /// ```
-///
-/// **Focus sections:** the timeframe bar, chart area, and sidebar each form an
-/// independent `.focusSection()` so Siri Remote navigates between them cleanly.
-///
-/// Uses `@Bindable` so `$viewModel.chartMode` flows directly into the Picker.
 struct ChartContainerView: View {
 
     @Bindable var viewModel: ChartViewModel
-    /// Passed in from ContentView so alert lines can be drawn from the same store
-    /// that `SettingsView` and `ChartViewModel` share.
     var alertStore: AlertStore?
 
-    /// Tracks whether the chart ZStack has focus (for crosshair interaction).
     @FocusState private var chartFocused: Bool
 
     var body: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
 
-                // ── Header row ─────────────────────────────────────────
-                headerRow
+                // ── Header bar ─────────────────────────────────────
+                headerBar
+                    .padding(.bottom, 8)
 
-                // ── Content: chart (left) + sidebar (right) ───────────
-                HStack(alignment: .top, spacing: 0) {
+                // Thin separator below header
+                Rectangle()
+                    .fill(AppTheme.separator)
+                    .frame(height: 1)
 
-                    // Left: chart + volume (fills remaining width)
+                // ── Main content ───────────────────────────────────
+                HStack(spacing: 0) {
+
+                    // Left: chart + volume
                     VStack(spacing: 0) {
                         chartArea
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            // Visual feedback: subtle border when chart area is focused
                             .overlay(
-                                RoundedRectangle(cornerRadius: AppTheme.badgeCornerRadius)
+                                RoundedRectangle(cornerRadius: 4)
                                     .stroke(
                                         chartFocused
-                                            ? AppTheme.textSecondary.opacity(0.5)
+                                            ? AppTheme.textSecondary.opacity(0.4)
                                             : Color.clear,
-                                        lineWidth: 2
+                                        lineWidth: 1
                                     )
                             )
                             .focusable()
                             .focused($chartFocused)
                             .focusSection()
-                            // Enter crosshair with Play/Pause button
                             .onPlayPauseCommand {
                                 if viewModel.isExploring {
                                     viewModel.exitExploration()
@@ -63,17 +64,14 @@ struct ChartContainerView: View {
                                     viewModel.enterExploration()
                                 }
                             }
-                            // Navigate crosshair with directional buttons
                             .onMoveCommand { direction in
                                 if viewModel.isExploring {
                                     viewModel.moveCrosshair(direction)
                                 } else if direction == .left || direction == .right {
-                                    // Allow entering exploration by swiping left/right
                                     viewModel.enterExploration()
                                     viewModel.moveCrosshair(direction)
                                 }
                             }
-                            // Exit crosshair with Menu button
                             .onExitCommand {
                                 viewModel.exitExploration()
                             }
@@ -83,20 +81,28 @@ struct ChartContainerView: View {
                                 maxWidth: .infinity,
                                 maxHeight: geometry.size.height * AppTheme.volumeHeightRatio
                             )
-                            .padding(.top, 12)
+                            .padding(.top, 4)
                     }
 
-                    // Right: sidebar — order book + trades feed placeholders
+                    // Vertical separator
+                    Rectangle()
+                        .fill(AppTheme.separator)
+                        .frame(width: 1)
+                        .padding(.vertical, 4)
+
+                    // Right: sidebar
                     sidebar
                         .frame(width: AppTheme.sidebarWidth)
                         .focusSection()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.top, 8)
             }
-            .padding(AppTheme.edgePadding)
+            .padding(.horizontal, AppTheme.edgePadding)
+            .padding(.vertical, 40)
         }
         .background(AppTheme.background.ignoresSafeArea())
-        // ── Alert banner overlay — slides in from top on threshold crossing ──
+        // ── Alert banner ──
         .overlay(alignment: .top) {
             if let alert = viewModel.triggeredAlert {
                 AlertBannerView(alert: alert)
@@ -105,126 +111,122 @@ struct ChartContainerView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: viewModel.triggeredAlert?.id)
-        // ── Reconnection banner — slides in from top when any stream is recovering ──
+        // ── Reconnection banner ──
         .overlay(alignment: .top) {
             if viewModel.connectionHealth == .reconnecting {
                 HStack(spacing: 12) {
                     ProgressView()
                         .tint(.white)
                     Text("Reconnecting to Binance…")
-                        .font(.title3)
+                        .font(.system(size: 22, weight: .medium))
                         .foregroundStyle(.white)
                 }
                 .padding(.horizontal, 24)
-                .padding(.vertical, 12)
+                .padding(.vertical, 10)
                 .background(AppTheme.stateReconnecting.opacity(0.9))
                 .clipShape(RoundedRectangle(cornerRadius: AppTheme.badgeCornerRadius))
                 .transition(.move(edge: .top).combined(with: .opacity))
-                .padding(.top, AppTheme.edgePadding + 60)  // offset below alert banner space
+                .padding(.top, AppTheme.edgePadding + 56)
             }
         }
         .animation(.easeInOut(duration: 0.3), value: viewModel.connectionHealth)
     }
 
-    // MARK: - Header row
+    // MARK: - Header bar (single compact row)
 
     @ViewBuilder
-    private var headerRow: some View {
-        HStack(alignment: .center, spacing: AppTheme.sectionSpacing) {
-            // Left: symbol + live price + 24 h change
-            priceSection
+    private var headerBar: some View {
+        HStack(spacing: 0) {
+            // ── Left: symbol + price + change ──
+            HStack(alignment: .firstTextBaseline, spacing: 16) {
+                Text("BTC/USDT")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(AppTheme.textSecondary)
 
-            // Center: 13 timeframe buttons (fills remaining horizontal space)
+                Text(formattedPrice)
+                    .font(.system(size: 44, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .contentTransition(.numericText())
+
+                Text(formattedChange)
+                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .foregroundStyle(changeColor)
+                    .contentTransition(.numericText())
+            }
+
+            Spacer(minLength: 24)
+
+            // ── Center: timeframe selector ──
             TimeframeSelectorView(
                 activeInterval: $viewModel.currentInterval,
                 onSelect: { viewModel.switchInterval($0) }
             )
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: 720)
 
-            // Right: chart mode toggle + connection indicator
-            chartModeToggle
-            ConnectionStatusView(state: viewModel.connectionHealth)
+            Spacer(minLength: 24)
+
+            // ── Right: mode toggle + status ──
+            HStack(spacing: 16) {
+                chartModeToggle
+                ConnectionStatusView(state: viewModel.connectionHealth)
+            }
         }
-        .padding(.bottom, AppTheme.sectionSpacing)
     }
 
-    // MARK: - Sidebar (live order book + trades feed)
+    // MARK: - Sidebar
 
     @ViewBuilder
     private var sidebar: some View {
         GeometryReader { geo in
             VStack(alignment: .leading, spacing: 0) {
-
-                // ── Order Book (top 60 %) ─────────────────────────────
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Order Book")
-                        .font(AppTheme.headlineFont)
-                        .foregroundStyle(AppTheme.textPrimary)
+                // ── Order Book (top ~55%) ──
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("ORDER BOOK")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(AppTheme.textMuted)
+                        .tracking(2)
 
                     OrderBookLadderView(orderBookStore: viewModel.orderBookStore)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(height: geo.size.height * 0.60)
+                .frame(height: geo.size.height * 0.58)
+                .clipped()
 
-                // ── Thin divider ──────────────────────────────────────
-                Divider()
-                    .background(AppTheme.textSecondary)
-                    .padding(.vertical, 8)
+                // ── Separator ──
+                Rectangle()
+                    .fill(AppTheme.separator)
+                    .frame(height: 1)
+                    .padding(.vertical, 6)
 
-                // ── Trades Feed (bottom 40 %) ─────────────────────────
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Recent Trades")
-                        .font(AppTheme.headlineFont)
-                        .foregroundStyle(AppTheme.textPrimary)
+                // ── Trades Feed (bottom ~45%) ──
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("TRADES")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(AppTheme.textMuted)
+                        .tracking(2)
 
                     TradesFeedView(tradeStore: viewModel.tradeStore)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(height: geo.size.height * 0.40)
+                .clipped()
             }
         }
-        .padding(.leading, AppTheme.sectionSpacing)
+        .padding(.leading, 16)
     }
 
-    // MARK: - Header: price section
-
-    @ViewBuilder
-    private var priceSection: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 20) {
-            // Symbol badge only (interval now lives in the timeframe selector)
-            Text("BTC/USDT")
-                .font(AppTheme.headlineFont)           // .title2
-                .foregroundStyle(AppTheme.textPrimary)
-
-            // Live price
-            Text(formattedPrice)
-                .font(.system(size: 48, weight: .bold))
-                .foregroundStyle(AppTheme.textPrimary)
-                .monospacedDigit()
-                .contentTransition(.numericText())
-
-            // 24 h change
-            Text(formattedChange)
-                .font(AppTheme.priceFont)              // .title
-                .foregroundStyle(changeColor)
-                .monospacedDigit()
-                .contentTransition(.numericText())
-        }
-    }
-
-    // MARK: - Header: chart mode toggle
+    // MARK: - Chart mode toggle
 
     @ViewBuilder
     private var chartModeToggle: some View {
-        Picker("Chart Mode", selection: $viewModel.chartMode) {
-            Text("Candlestick").tag(ChartMode.candlestick)
+        Picker("", selection: $viewModel.chartMode) {
+            Text("Candle").tag(ChartMode.candlestick)
             Text("Line").tag(ChartMode.line)
         }
         .pickerStyle(.segmented)
-        .frame(width: 360)
+        .frame(width: 260)
     }
 
-    // MARK: - Chart area (ZStack: heatmap → chart → crosshair → loading indicator)
+    // MARK: - Chart area
 
     @ViewBuilder
     private var chartArea: some View {
@@ -235,7 +237,6 @@ struct ChartContainerView: View {
         }
     }
 
-    /// Error state shown when the REST fetch has failed and no historical data is available.
     private var chartErrorView: some View {
         VStack(spacing: AppTheme.sectionSpacing) {
             Image(systemName: "exclamationmark.triangle")
@@ -244,7 +245,7 @@ struct ChartContainerView: View {
             Text("Data temporarily unavailable")
                 .font(AppTheme.headlineFont)
                 .foregroundStyle(AppTheme.textPrimary)
-            Text("Check your network connection. The chart will reload automatically when data is available.")
+            Text("Check your network connection.")
                 .font(AppTheme.bodyFont)
                 .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -253,7 +254,6 @@ struct ChartContainerView: View {
         .padding(AppTheme.edgePadding)
     }
 
-    /// Main ZStack: heatmap → chart → overlays → loading indicator.
     @ViewBuilder
     private var chartZStack: some View {
         let klines = viewModel.klineStore.klines
@@ -274,14 +274,12 @@ struct ChartContainerView: View {
                 LineChartView(klines: klines)
             }
 
-            // Alert price level overlays — dashed horizontal lines at each configured threshold.
             AlertOverlayView(
                 alerts: alertStore?.alerts.filter { $0.isEnabled } ?? [],
                 priceMin: pMin,
                 priceRange: pRange
             )
 
-            // Crosshair overlay — shown only when exploring and index is valid
             if viewModel.isExploring,
                let idx = viewModel.crosshairIndex,
                !klines.isEmpty {
@@ -301,7 +299,7 @@ struct ChartContainerView: View {
         }
     }
 
-    // MARK: - Formatting helpers
+    // MARK: - Formatting
 
     private static let priceFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
