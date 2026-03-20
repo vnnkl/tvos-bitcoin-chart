@@ -31,7 +31,7 @@ struct ContentView: View {
     var body: some View {
         TabView {
             // ── Chart tab ──────────────────────────────────────────────
-            ChartContainerView(viewModel: viewModel)
+            ChartContainerView(viewModel: viewModel, alertStore: alertStore)
                 .tabItem {
                     Label("Chart", systemImage: "chart.bar")
                 }
@@ -51,6 +51,8 @@ struct ContentView: View {
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
             case .active:
+                // Inject alertStore into viewModel so crossing detection has access to alerts.
+                viewModel.alertStore = alertStore
                 // Apply persisted defaults on first activation only.
                 if !defaultsApplied {
                     defaultsApplied = true
