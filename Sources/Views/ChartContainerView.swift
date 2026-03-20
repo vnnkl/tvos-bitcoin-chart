@@ -80,44 +80,40 @@ struct ChartContainerView: View {
         .padding(.bottom, AppTheme.sectionSpacing)
     }
 
-    // MARK: - Sidebar (placeholder content — wired to real views in T03)
+    // MARK: - Sidebar (live order book + trades feed)
 
     @ViewBuilder
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: AppTheme.sectionSpacing) {
-            // Order book section placeholder
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Order Book")
-                    .font(AppTheme.headlineFont)
-                    .foregroundStyle(AppTheme.textPrimary)
+        GeometryReader { geo in
+            VStack(alignment: .leading, spacing: 0) {
 
+                // ── Order Book (top 60 %) ─────────────────────────────
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Order Book")
+                        .font(AppTheme.headlineFont)
+                        .foregroundStyle(AppTheme.textPrimary)
+
+                    OrderBookLadderView(orderBookStore: viewModel.orderBookStore)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .frame(height: geo.size.height * 0.60)
+
+                // ── Thin divider ──────────────────────────────────────
                 Divider()
-                    .overlay(AppTheme.textSecondary)
+                    .background(AppTheme.textSecondary)
+                    .padding(.vertical, 8)
 
-                Text("Connecting…")
-                    .font(AppTheme.bodyFont)
-                    .foregroundStyle(AppTheme.textSecondary)
+                // ── Trades Feed (bottom 40 %) ─────────────────────────
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Recent Trades")
+                        .font(AppTheme.headlineFont)
+                        .foregroundStyle(AppTheme.textPrimary)
 
-                Spacer()
+                    TradesFeedView(tradeStore: viewModel.tradeStore)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .frame(height: geo.size.height * 0.40)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            // Trades feed section placeholder
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Recent Trades")
-                    .font(AppTheme.headlineFont)
-                    .foregroundStyle(AppTheme.textPrimary)
-
-                Divider()
-                    .overlay(AppTheme.textSecondary)
-
-                Text("Connecting…")
-                    .font(AppTheme.bodyFont)
-                    .foregroundStyle(AppTheme.textSecondary)
-
-                Spacer()
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.leading, AppTheme.sectionSpacing)
     }
