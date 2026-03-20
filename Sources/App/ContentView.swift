@@ -16,11 +16,12 @@ import SwiftUI
 /// phase if the persisted default differs from the ViewModel's built-in default.
 ///
 /// **Tab navigation (custom tab switcher):**
-/// `selectedTab` drives which content view is rendered. Swipe up to reveal the floating
-/// pill tab bar overlay; it auto-hides after ~3 seconds once focus leaves it. The tab bar
-/// is always present in the view hierarchy after the disclaimer is dismissed (opacity-
-/// controlled, not conditionally rendered) so the tvOS Focus Engine can navigate to it
-/// via upward swipe at any time.
+/// `selectedTab` drives which content view is rendered. The floating pill tab bar
+/// overlay is visible on launch for 4 seconds, then auto-hides. A persistent
+/// "▲ Menu" hint remains visible at the top when the tab bar is collapsed so
+/// the user always knows how to navigate. Swiping up reveals the full tab bar
+/// again; it auto-hides ~3 seconds after focus leaves it. The tab bar re-flashes
+/// on every tab switch.
 struct ContentView: View {
 
     // MARK: - Owned state / stores
@@ -40,7 +41,7 @@ struct ContentView: View {
     }
 
     @State private var selectedTab: Tab = .chart
-    @State private var tabBarVisible    = false
+    @State private var tabBarVisible    = true   // visible on launch so user discovers it
     @FocusState private var focusedTab: Tab?
     @State private var hideTask: Task<Void, Never>?
 
@@ -104,12 +105,29 @@ struct ContentView: View {
                 hideTask = nil
             } else {
                 // Focus left the tab bar — schedule auto-hide after 3 seconds.
-                hideTask?.cancel()
-                hideTask = Task {
-                    try? await Task.sleep(for: .seconds(3))
-                    await MainActor.run { tabBarVisible = false }
-                }
+                scheduleTabBarHide()
             }
+        }
+        .onChange(of: selectedTab) { _, _ in
+            // Re-flash the tab bar on every tab switch so user sees current position.
+            tabBarVisible = true
+            scheduleTabBarHide()
+        }
+        .task {
+            // Auto-hide after initial 4-second reveal on launch.
+            try? await Task.sleep(for: .seconds(4))
+            if focusedTab == nil { tabBarVisible = false }
+        }
+    }
+
+    // MARK: - Tab Bar Helpers
+
+    /// Cancel any pending hide and schedule a new 3-second auto-hide.
+    private func scheduleTabBarHide() {
+        hideTask?.cancel()
+        hideTask = Task {
+            try? await Task.sleep(for: .seconds(3))
+            await MainActor.run { tabBarVisible = false }
         }
     }
 
@@ -119,10 +137,11 @@ struct ContentView: View {
     ///
     /// Opacity drives show/hide (not conditional rendering) so focusable buttons
     /// remain in the view hierarchy at all times. The overlay auto-hides ~3 s after
-    /// focus leaves the section. Inspectable via `tabBarVisible` in the SwiftUI
-    /// debug inspector; inspect `hideTask` to confirm timer is running.
+    /// focus leaves the section. When collapsed, a persistent "▲ Menu" hint capsule
+    /// stays visible so the user always knows navigation is available via swipe-up.
     private var tabBarOverlay: some View {
         VStack(spacing: 0) {
+            // ── Full tab bar (opacity-controlled) ────────────────────
             HStack(spacing: 12) {
                 // ── Chart button ────────────────────────────────────────
                 Button {
@@ -201,6 +220,23 @@ struct ContentView: View {
             .onExitCommand { tabBarVisible = false }
             .opacity(tabBarVisible ? 1 : 0)
             .animation(.easeInOut(duration: 0.3), value: tabBarVisible)
+
+            // ── Persistent "▲ Menu" hint — visible when tab bar is collapsed ──
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.up")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("Menu")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundStyle(AppTheme.textSecondary.opacity(0.6))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+            .background(Color(white: 0.08).opacity(0.7))
+            .clipShape(Capsule())
+            .opacity(tabBarVisible ? 0 : 1)
+            .animation(.easeInOut(duration: 0.3), value: tabBarVisible)
+            .padding(.top, 4)
+            .allowsHitTesting(false)
 
             Spacer()
         }

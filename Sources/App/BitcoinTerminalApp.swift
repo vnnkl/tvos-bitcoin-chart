@@ -6,6 +6,7 @@ struct BitcoinTerminalApp: App {
         WindowGroup {
             ContentView()
                 .preferredColorScheme(.dark)
+                .persistentSystemOverlays(.hidden)
         }
     }
 }
