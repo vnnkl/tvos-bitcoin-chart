@@ -13,23 +13,23 @@ struct STRCStatusCardView: View {
 
     // MARK: - Formatters
 
-    private var currencyFormatter: NumberFormatter {
-        let f = NumberFormatter()
+    private static let currencyFormatter: NumberFormatter = {
+        let f: NumberFormatter = .init()
         f.numberStyle = .currency
         f.currencyCode = "USD"
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 2
         return f
-    }
+    }()
 
-    private var percentFormatter: NumberFormatter {
-        let f = NumberFormatter()
+    private static let percentFormatter: NumberFormatter = {
+        let f: NumberFormatter = .init()
         f.numberStyle = .percent
         f.minimumFractionDigits = 1
         f.maximumFractionDigits = 2
         f.multiplier = 1   // values are already in percent form (e.g. 11.5 not 0.115)
         return f
-    }
+    }()
 
     // MARK: - Body
 
@@ -73,7 +73,7 @@ struct STRCStatusCardView: View {
                         )
                         metricCell(
                             label: "Dividend",
-                            value: currencyFormatter.string(from: NSNumber(value: div.amount)) ?? "—",
+                            value: Self.currencyFormatter.string(from: NSNumber(value: div.amount)) ?? "—",
                             valueColor: AppTheme.textPrimary
                         )
                         metricCell(
@@ -96,7 +96,7 @@ struct STRCStatusCardView: View {
                     Text("After Hours")
                         .font(.title3)
                         .foregroundStyle(AppTheme.textSecondary)
-                    Text(currencyFormatter.string(from: NSNumber(value: ahPrice)) ?? "—")
+                    Text(Self.currencyFormatter.string(from: NSNumber(value: ahPrice)) ?? "—")
                         .font(.title3)
                         .foregroundStyle(AppTheme.textPrimary)
                     changeLabel(ahChange)
@@ -134,7 +134,7 @@ struct STRCStatusCardView: View {
         let change = ticker.closePrice - ticker.previousClose
         let changePct = ticker.previousClose > 0 ? change / ticker.previousClose * 100 : 0
         VStack(alignment: .trailing, spacing: 4) {
-            Text(currencyFormatter.string(from: NSNumber(value: ticker.closePrice)) ?? "—")
+            Text(Self.currencyFormatter.string(from: NSNumber(value: ticker.closePrice)) ?? "—")
                 .font(.title)
                 .fontDesign(.monospaced)
                 .foregroundStyle(AppTheme.textPrimary)
@@ -177,7 +177,7 @@ struct STRCStatusCardView: View {
     // MARK: - Formatting helpers
 
     private func formatPercent(_ value: Double) -> String {
-        percentFormatter.string(from: NSNumber(value: value)) ?? "—"
+        Self.percentFormatter.string(from: NSNumber(value: value)) ?? "—"
     }
 
     private func formatVsPar(_ close: Double) -> String {

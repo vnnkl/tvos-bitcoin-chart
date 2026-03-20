@@ -22,22 +22,22 @@ struct STRCFilingsListView: View {
 
     // MARK: - Formatters
 
-    private var sharesFormatter: NumberFormatter {
-        let f = NumberFormatter()
+    private static let sharesFormatter: NumberFormatter = {
+        let f: NumberFormatter = .init()
         f.numberStyle = .decimal
         f.usesGroupingSeparator = true
         f.maximumFractionDigits = 0
         return f
-    }
+    }()
 
-    private var btcFormatter: NumberFormatter {
-        let f = NumberFormatter()
+    private static let btcFormatter: NumberFormatter = {
+        let f: NumberFormatter = .init()
         f.numberStyle = .decimal
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 3
         f.usesGroupingSeparator = true
         return f
-    }
+    }()
 
     // MARK: - Body
 
@@ -126,7 +126,7 @@ struct STRCFilingsListView: View {
                 .frame(width: 220, alignment: .leading)
                 .foregroundStyle(AppTheme.textSecondary)
 
-            Text(sharesFormatter.string(from: NSNumber(value: filing.sharesSold)) ?? "—")
+            Text(Self.sharesFormatter.string(from: NSNumber(value: filing.sharesSold)) ?? "—")
                 .frame(minWidth: 160, alignment: .trailing)
                 .foregroundStyle(AppTheme.textPrimary)
 
@@ -134,7 +134,7 @@ struct STRCFilingsListView: View {
                 .frame(minWidth: 180, alignment: .trailing)
                 .foregroundStyle(AppTheme.textPrimary)
 
-            Text(btcFormatter.string(from: NSNumber(value: filing.estimatedBTCPurchased)) ?? "—")
+            Text(Self.btcFormatter.string(from: NSNumber(value: filing.estimatedBTCPurchased)) ?? "—")
                 .frame(minWidth: 160, alignment: .trailing)
                 .foregroundStyle(AppTheme.strcAccent)
 
