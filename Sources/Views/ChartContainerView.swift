@@ -204,27 +204,43 @@ struct ChartContainerView: View {
     @ViewBuilder
     private var sidebar: some View {
         GeometryReader { geo in
+            let orderBookHeight = geo.size.height * 0.58
+            let ladderHeight    = orderBookHeight * 0.6
+            let depthHeight     = orderBookHeight * 0.4
+
             VStack(alignment: .leading, spacing: 0) {
-                // ── Order Book (top ~55%) ──
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("ORDER BOOK")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(AppTheme.textMuted)
-                        .tracking(2)
+                // ── Order Book header ──
+                Text("ORDER BOOK")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(AppTheme.textMuted)
+                    .tracking(2)
+                    .padding(.bottom, 6)
 
-                    OrderBookLadderView(orderBookStore: viewModel.orderBookStore)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                .frame(height: geo.size.height * 0.58)
-                .clipped()
+                // ── Order Book Ladder (~60% of order book allocation) ──
+                OrderBookLadderView(orderBookStore: viewModel.orderBookStore)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: ladderHeight)
+                    .clipped()
 
-                // ── Separator ──
+                // ── Ladder / Depth separator ──
+                Rectangle()
+                    .fill(AppTheme.separator)
+                    .frame(height: 1)
+                    .padding(.vertical, 4)
+
+                // ── Depth Chart (~40% of order book allocation) ──
+                DepthChartView(snapshot: viewModel.orderBookStore.snapshots.last)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: depthHeight)
+                    .clipped()
+
+                // ── Section separator ──
                 Rectangle()
                     .fill(AppTheme.separator)
                     .frame(height: 1)
                     .padding(.vertical, 6)
 
-                // ── Trades Feed (bottom ~45%) ──
+                // ── Trades Feed (remaining height) ──
                 VStack(alignment: .leading, spacing: 6) {
                     Text("TRADES")
                         .font(.system(size: 16, weight: .bold))
