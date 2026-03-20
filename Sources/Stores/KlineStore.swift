@@ -39,7 +39,8 @@ final class KlineStore: @unchecked Sendable {
         let cutoff = last.openTime - 86_400          // 24 h in seconds
         let reference = klines.first(where: { $0.openTime >= cutoff }) ?? klines.first
         guard let ref = reference, ref.openTime != last.openTime else { return 0 }
-        return last.close - ref.close
+        guard ref.close != 0 else { return 0 }
+        return (last.close - ref.close) / ref.close * 100
     }
 
     // MARK: - Data ingestion

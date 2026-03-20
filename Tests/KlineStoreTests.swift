@@ -173,4 +173,17 @@ struct KlineStoreTests {
         let store = KlineStore()
         #expect(store.priceChange24h == 0)
     }
+
+    @Test("priceChange24h returns correct percentage")
+    func priceChange24h_percentage() {
+        let store = KlineStore()
+        // ref kline: 24h before last, close = 50000
+        let refTime = Date(timeIntervalSince1970: 0)
+        let lastTime = Date(timeIntervalSince1970: 86_400) // exactly 24h later
+        let refKline  = makeKline(openTime: refTime,  close: 50_000)
+        let lastKline = makeKline(openTime: lastTime, close: 50_110)
+        store.loadHistorical([refKline, lastKline])
+        // (50110 - 50000) / 50000 * 100 = 110 / 50000 * 100 = 0.22
+        #expect(store.priceChange24h == Decimal(string: "0.22")!)
+    }
 }
