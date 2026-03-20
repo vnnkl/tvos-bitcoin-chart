@@ -17,6 +17,7 @@ struct AlertBannerView: View {
 
     private static let priceFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
+        f.locale = Locale(identifier: "en_US")
         f.numberStyle = .decimal
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 2

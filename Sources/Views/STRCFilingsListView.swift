@@ -24,6 +24,7 @@ struct STRCFilingsListView: View {
 
     private static let sharesFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
+        f.locale = Locale(identifier: "en_US")
         f.numberStyle = .decimal
         f.usesGroupingSeparator = true
         f.maximumFractionDigits = 0
@@ -32,6 +33,7 @@ struct STRCFilingsListView: View {
 
     private static let btcFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
+        f.locale = Locale(identifier: "en_US")
         f.numberStyle = .decimal
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 3

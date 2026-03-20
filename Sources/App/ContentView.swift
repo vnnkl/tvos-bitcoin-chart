@@ -107,6 +107,7 @@ struct ContentView: View {
                 appSettings.hasSeenDisclaimer = true
             }
             .buttonStyle(.plain)
+            .focusEffectDisabled()
             .font(.title3)
             .padding(.horizontal, 60)
             .padding(.vertical, 20)
