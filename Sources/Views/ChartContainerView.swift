@@ -99,7 +99,7 @@ struct ChartContainerView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.top, 2)
             }
-            .padding(.horizontal, 0)
+            .padding(.horizontal, 12)
             .padding(.vertical, 0)
         }
         .ignoresSafeArea(.container, edges: [.horizontal, .bottom])

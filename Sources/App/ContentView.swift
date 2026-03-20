@@ -58,6 +58,8 @@ struct ContentView: View {
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
             case .active:
+                // Prevent tvOS screensaver — this app is designed to stay on.
+                UIApplication.shared.isIdleTimerDisabled = true
                 // Inject alertStore into viewModel so alert crossing detection works.
                 viewModel.alertStore = alertStore
                 // Apply persisted defaults on first activation only.
@@ -70,6 +72,7 @@ struct ContentView: View {
                 viewModel.start()
                 strcViewModel.start()
             case .background, .inactive:
+                UIApplication.shared.isIdleTimerDisabled = false
                 viewModel.stop()
                 strcViewModel.stop()
             @unknown default:
