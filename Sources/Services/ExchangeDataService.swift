@@ -26,6 +26,15 @@ protocol ExchangeDataService: Sendable {
     /// S02 consumes this; the type is stubbed in S01.
     func subscribeOrderBook(symbol: String) -> AsyncThrowingStream<OrderBookSnapshot, Error>
 
+    /// Streams live aggregate trades over WebSocket.
+    ///
+    /// Connects to `wss://stream.binance.com:9443/ws/<symbol>@aggTrade`.
+    /// Each message represents one aggregated trade (one or more individual fills).
+    ///
+    /// **Direction convention:** `AggTrade.isBuyerMaker == true` → SELL (seller was aggressor).
+    /// Use `AggTrade.isBuy` for display colour logic.
+    func subscribeTrades(symbol: String) -> AsyncThrowingStream<AggTrade, Error>
+
     /// Closes all active WebSocket streams and resets state to `.disconnected`.
     func disconnect()
 }

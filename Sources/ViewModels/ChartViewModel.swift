@@ -21,6 +21,7 @@ final class ChartViewModel {
 
     let klineStore = KlineStore()
     let orderBookStore = OrderBookStore()
+    let tradeStore = TradeStore()
     var connectionState: ConnectionState = .disconnected
     var chartMode: ChartMode = .candlestick
     var currentSymbol = "BTCUSDT"
@@ -33,6 +34,7 @@ final class ChartViewModel {
     private let service: any ExchangeDataService
     private var streamTask: Task<Void, Never>?
     private var depthStreamTask: Task<Void, Never>?
+    private var tradesStreamTask: Task<Void, Never>?
     private var stateObserverTask: Task<Void, Never>?
 
     // MARK: - Init
@@ -59,6 +61,8 @@ final class ChartViewModel {
         streamTask = nil
         depthStreamTask?.cancel()
         depthStreamTask = nil
+        tradesStreamTask?.cancel()
+        tradesStreamTask = nil
         service.disconnect()
         connectionState = .disconnected
     }
@@ -69,11 +73,15 @@ final class ChartViewModel {
         currentInterval = interval
         streamTask?.cancel()
         depthStreamTask?.cancel()
+        tradesStreamTask?.cancel()
         streamTask = Task {
             // Clear stores before reloading so the chart shows empty → new data.
             // Depth history is tied to visual context — clear it too when interval changes.
+            // Note: aggTrade stream is NOT interval-specific, but lifecycle is cancelled and
+            // restarted here to keep all three streams in sync.
             klineStore.loadHistorical([])
             orderBookStore.clear()
+            tradeStore.clear()
             await loadAndStream(symbol: currentSymbol, interval: interval)
         }
     }
@@ -118,7 +126,23 @@ final class ChartViewModel {
             }
         }
 
-        // 2b. Subscribe to kline live stream on the current Task.
+        // 2b. Start trades stream concurrently — independent of kline stream lifecycle.
+        // aggTrade is NOT interval-specific; it streams all trades regardless of kline interval.
+        tradesStreamTask?.cancel()
+        tradesStreamTask = Task { [weak self] in
+            guard let self else { return }
+            let tradesStream = service.subscribeTrades(symbol: symbol)
+            do {
+                for try await trade in tradesStream {
+                    guard !Task.isCancelled else { break }
+                    tradeStore.append(trade)
+                }
+            } catch {
+                logger.error("Trades stream error: \(error.localizedDescription)")
+            }
+        }
+
+        // 2c. Subscribe to kline live stream on the current Task.
         let liveStream = service.subscribeKlines(symbol: symbol, interval: interval)
         do {
             for try await kline in liveStream {
