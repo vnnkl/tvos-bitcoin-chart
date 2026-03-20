@@ -1,0 +1,75 @@
+name: BitcoinTerminal
+options:
+  bundleIdPrefix: com.bitcointerminal
+  deploymentTarget:
+    tvOS: "17.0"
+  createIntermediateGroups: true
+  defaultConfig: Debug
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    ENABLE_HARDENED_RUNTIME: NO
+
+targets:
+  BitcoinTerminal:
+    type: application
+    platform: tvOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Sources
+        excludes:
+          - "**/*.md"
+    resources:
+      - Resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.bitcointerminal.BitcoinTerminal
+        INFOPLIST_FILE: Sources/Info.plist
+        SWIFT_VERSION: "6.0"
+        TVOS_DEPLOYMENT_TARGET: "17.0"
+        TARGETED_DEVICE_FAMILY: "3"
+      debug:
+        DEBUG_INFORMATION_FORMAT: dwarf
+        SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+      release:
+        DEBUG_INFORMATION_FORMAT: "dwarf-with-dsym"
+        SWIFT_OPTIMIZATION_LEVEL: "-O"
+
+  BitcoinTerminalTests:
+    type: bundle.unit-test
+    platform: tvOS
+    deploymentTarget: "17.0"
+    sources:
+      - Tests
+    dependencies:
+      - target: BitcoinTerminal
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.bitcointerminal.BitcoinTerminalTests
+        SWIFT_VERSION: "6.0"
+        TVOS_DEPLOYMENT_TARGET: "17.0"
+        TARGETED_DEVICE_FAMILY: "3"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/BitcoinTerminal.app/BitcoinTerminal"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  BitcoinTerminal:
+    build:
+      targets:
+        BitcoinTerminal: all
+    run:
+      config: Debug
+    archive:
+      config: Release
+
+  BitcoinTerminalTests:
+    build:
+      targets:
+        BitcoinTerminalTests: [test]
+        BitcoinTerminal: [build]
+    test:
+      config: Debug
+      targets:
+        - BitcoinTerminalTests

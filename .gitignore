@@ -1,28 +1,16 @@
+# Xcode — regenerated from project.yml
+BitcoinTerminal.xcodeproj/
+xcuserdata/
+*.xcworkspace/
+DerivedData/
 
-# ── GSD baseline (auto-generated) ──
-.gsd
+# macOS
 .DS_Store
-Thumbs.db
-*.swp
-*.swo
-*~
-.idea/
-.vscode/
-*.code-workspace
-.env
-.env.*
-!.env.example
-node_modules/
-.next/
-dist/
+**/.DS_Store
+
+# Build artifacts
 build/
-__pycache__/
-*.pyc
-.venv/
-venv/
-target/
-vendor/
-*.log
-coverage/
-.cache/
-tmp/
+
+# Swift Package Manager
+.build/
+Package.resolved
