@@ -209,6 +209,34 @@ struct ChartContainerView: View {
 
     @ViewBuilder
     private var chartArea: some View {
+        if viewModel.error != nil && viewModel.klineStore.klines.isEmpty {
+            chartErrorView
+        } else {
+            chartZStack
+        }
+    }
+
+    /// Error state shown when the REST fetch has failed and no historical data is available.
+    private var chartErrorView: some View {
+        VStack(spacing: AppTheme.sectionSpacing) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 64))
+                .foregroundStyle(AppTheme.candleDown)
+            Text("Data temporarily unavailable")
+                .font(AppTheme.headlineFont)
+                .foregroundStyle(AppTheme.textPrimary)
+            Text("Check your network connection. The chart will reload automatically when data is available.")
+                .font(AppTheme.bodyFont)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(AppTheme.edgePadding)
+    }
+
+    /// Main ZStack: heatmap → chart → overlays → loading indicator.
+    @ViewBuilder
+    private var chartZStack: some View {
         let klines = viewModel.klineStore.klines
         let (pMin, pRange) = priceExtents(klines)
 
