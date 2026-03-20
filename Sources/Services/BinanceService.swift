@@ -6,7 +6,8 @@ private let logger = Logger(subsystem: "com.bitcointerminal.websocket", category
 /// Binance implementation of `ExchangeDataService`.
 ///
 /// - REST endpoint: `https://api.binance.com/api/v3/uiKlines`
-/// - WebSocket: `wss://stream.binance.com:9443/ws/<symbol>@kline_<interval>`
+/// - WebSocket (klines): `wss://stream.binance.com:9443/ws/<symbol>@kline_<interval>`
+/// - WebSocket (depth): `wss://stream.binance.com:9443/ws/<symbol>@depth20@100ms`
 final class BinanceService: ExchangeDataService, @unchecked Sendable {
 
     // MARK: - Configuration
@@ -15,6 +16,7 @@ final class BinanceService: ExchangeDataService, @unchecked Sendable {
     private let wsBaseURL  = "wss://stream.binance.com:9443/ws/"
     private let urlSession: URLSession
     private let webSocketManager: WebSocketManager
+    private let depthWebSocketManager: WebSocketManager
 
     // MARK: - ExchangeDataService
 
@@ -24,9 +26,14 @@ final class BinanceService: ExchangeDataService, @unchecked Sendable {
 
     // MARK: - Init
 
-    init(urlSession: URLSession = .shared, webSocketManager: WebSocketManager = WebSocketManager()) {
+    init(
+        urlSession: URLSession = .shared,
+        webSocketManager: WebSocketManager = WebSocketManager(),
+        depthWebSocketManager: WebSocketManager = WebSocketManager()
+    ) {
         self.urlSession = urlSession
         self.webSocketManager = webSocketManager
+        self.depthWebSocketManager = depthWebSocketManager
     }
 
     // MARK: - REST
@@ -59,7 +66,7 @@ final class BinanceService: ExchangeDataService, @unchecked Sendable {
         return klines
     }
 
-    // MARK: - WebSocket
+    // MARK: - WebSocket: Klines
 
     /// Streams live kline updates for `symbol` at `interval`.
     func subscribeKlines(symbol: String, interval: String) -> AsyncThrowingStream<Kline, Error> {
@@ -90,14 +97,50 @@ final class BinanceService: ExchangeDataService, @unchecked Sendable {
         }
     }
 
-    /// Order-book stream stub — implemented in S02.
+    // MARK: - WebSocket: Order Book Depth
+
+    /// Streams live partial order-book depth snapshots for `symbol`.
+    ///
+    /// Connects to `wss://stream.binance.com:9443/ws/<symbol>@depth20@100ms`.
+    /// Each message is a self-contained top-20 bid/ask snapshot — no reconciliation needed.
+    ///
+    /// - Observability: connect/disconnect/errors logged under subsystem
+    ///   `"com.bitcointerminal.websocket"` category `"BinanceService"`.
+    ///   Inspect with: `log stream --predicate 'subsystem == "com.bitcointerminal.websocket"'`
     func subscribeOrderBook(symbol: String) -> AsyncThrowingStream<OrderBookSnapshot, Error> {
-        AsyncThrowingStream { $0.finish() }
+        let path = "\(symbol.lowercased())@depth20@100ms"
+        guard let url = URL(string: "\(wsBaseURL)\(path)") else {
+            return AsyncThrowingStream { $0.finish(throwing: URLError(.badURL)) }
+        }
+
+        logger.info("Subscribing to depth stream: \(url.absoluteString)")
+        let messageStream = depthWebSocketManager.connect(to: url)
+
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    for try await message in messageStream {
+                        guard case .string(let text) = message else { continue }
+                        guard let data = text.data(using: .utf8) else { continue }
+                        let snapshot = try JSONDecoder().decode(OrderBookSnapshot.self, from: data)
+                        continuation.yield(snapshot)
+                    }
+                    continuation.finish()
+                } catch {
+                    logger.error("depth stream error: \(error.localizedDescription)")
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
     }
 
-    /// Disconnects all active WebSocket connections.
+    // MARK: - Lifecycle
+
+    /// Disconnects all active WebSocket connections (klines + depth).
     func disconnect() {
-        logger.info("BinanceService.disconnect()")
+        logger.info("BinanceService.disconnect() — disconnecting kline and depth streams")
         webSocketManager.disconnect()
+        depthWebSocketManager.disconnect()
     }
 }
