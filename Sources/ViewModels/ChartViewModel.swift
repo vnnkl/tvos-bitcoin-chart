@@ -49,6 +49,47 @@ final class ChartViewModel {
     var isLoading = false
     var error: Error?
 
+    // MARK: - Zoom state
+
+    /// Current zoom level. Positive = zoomed in (fewer candles), negative = zoomed out (more candles).
+    /// Clamped to −3…+5.
+    var zoomLevel: Int = 0
+
+    /// The subset of klines currently visible given the zoom level.
+    /// Zoom applies `pow(0.7, zoomLevel)` as a fraction of the full kline array,
+    /// clamped to a minimum of 20 candles and a maximum of the full array.
+    /// Always returns a suffix of `klineStore.klines` (most-recent candles).
+    var visibleKlines: [Kline] {
+        let base = klineStore.klines.count
+        guard base > 0 else { return [] }
+        let factor = pow(0.7, Double(zoomLevel))
+        let count = max(20, min(base, Int(Double(base) * factor)))
+        return Array(klineStore.klines.suffix(count))
+    }
+
+    /// Zoom in: show fewer, larger candles. Clamps at +5.
+    /// If exploring, crosshairIndex is clamped to the new visible range.
+    func zoomIn() {
+        guard zoomLevel < 5 else { return }
+        zoomLevel += 1
+        clampCrosshairToVisible()
+        logger.info("Zoom in → level=\(self.zoomLevel) visible=\(self.visibleKlines.count)")
+    }
+
+    /// Zoom out: show more candles, broader view. Clamps at −3.
+    /// If exploring, crosshairIndex is clamped to the new visible range.
+    func zoomOut() {
+        guard zoomLevel > -3 else { return }
+        zoomLevel -= 1
+        clampCrosshairToVisible()
+        logger.info("Zoom out → level=\(self.zoomLevel) visible=\(self.visibleKlines.count)")
+    }
+
+    private func clampCrosshairToVisible() {
+        guard isExploring, let idx = crosshairIndex, !visibleKlines.isEmpty else { return }
+        crosshairIndex = min(idx, visibleKlines.count - 1)
+    }
+
     // MARK: - Crosshair / exploration state
 
     /// True while the user is scrubbing through candle history with the Siri Remote.
@@ -59,10 +100,11 @@ final class ChartViewModel {
     var crosshairIndex: Int? = nil
 
     /// The kline under the crosshair, or `nil` when not exploring / index out of range.
+    /// Indexes into `visibleKlines`, not the full `klineStore.klines` array.
     var crosshairKline: Kline? {
         guard let idx = crosshairIndex,
-              klineStore.klines.indices.contains(idx) else { return nil }
-        return klineStore.klines[idx]
+              visibleKlines.indices.contains(idx) else { return nil }
+        return visibleKlines[idx]
     }
 
     // MARK: - Alert state
@@ -146,18 +188,18 @@ final class ChartViewModel {
 
     // MARK: - Crosshair interaction
 
-    /// Enter exploration mode: freeze auto-scroll, pin crosshair to the rightmost candle.
+    /// Enter exploration mode: freeze auto-scroll, pin crosshair to the rightmost visible candle.
     func enterExploration() {
-        guard !klineStore.klines.isEmpty else { return }
+        guard !visibleKlines.isEmpty else { return }
         isExploring = true
-        crosshairIndex = klineStore.klines.count - 1
-        logger.info("Crosshair entered at index \(self.crosshairIndex ?? -1)")
+        crosshairIndex = visibleKlines.count - 1
+        logger.info("Crosshair entered at index \(self.crosshairIndex ?? -1) (visibleKlines.count=\(self.visibleKlines.count))")
     }
 
-    /// Move the crosshair one candle left or right. Clamps to the klines array bounds.
+    /// Move the crosshair one candle left or right. Clamps to the visibleKlines bounds.
     func moveCrosshair(_ direction: MoveCommandDirection) {
         guard isExploring, let current = crosshairIndex else { return }
-        let maxIndex = klineStore.klines.count - 1
+        let maxIndex = visibleKlines.count - 1
         switch direction {
         case .left:
             crosshairIndex = max(0, current - 1)
@@ -242,9 +284,10 @@ final class ChartViewModel {
                 let prevPrice = klineStore.currentPrice
                 klineStore.applyLive(kline)
                 let newCount = klineStore.klines.count
-                // Stability: when exploring, if the klines array didn't grow (a trim happened),
+                // Stability: when exploring, if the visible array didn't grow (a trim happened),
                 // the crosshairIndex points to a different candle — decrement to compensate.
-                if isExploring, let idx = crosshairIndex, newCount == prevCount, idx > 0 {
+                // We check visibleKlines.count because crosshairIndex indexes into visibleKlines.
+                if isExploring, let idx = crosshairIndex, visibleKlines.count == prevCount, idx > 0 {
                     crosshairIndex = idx - 1
                 }
                 connectionState = service.connectionState

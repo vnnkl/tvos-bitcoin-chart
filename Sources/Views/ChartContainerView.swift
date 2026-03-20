@@ -76,7 +76,7 @@ struct ChartContainerView: View {
                                 viewModel.exitExploration()
                             }
 
-                        VolumeBarView(klines: viewModel.klineStore.klines)
+                        VolumeBarView(klines: viewModel.visibleKlines)
                             .frame(
                                 maxWidth: .infinity,
                                 maxHeight: geometry.size.height * AppTheme.volumeHeightRatio
@@ -165,8 +165,31 @@ struct ChartContainerView: View {
 
             Spacer(minLength: 24)
 
-            // ── Right: mode toggle + status ──
+            // ── Right: zoom buttons + mode toggle + status ──
             HStack(spacing: 16) {
+                // Zoom out / zoom in
+                HStack(spacing: 8) {
+                    Button { viewModel.zoomOut() } label: {
+                        Image(systemName: "minus.magnifyingglass")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .frame(minWidth: 52, minHeight: 52)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.12)))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.zoomLevel <= -3)
+
+                    Button { viewModel.zoomIn() } label: {
+                        Image(systemName: "plus.magnifyingglass")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .frame(minWidth: 52, minHeight: 52)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.12)))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.zoomLevel >= 5)
+                }
+
                 chartModeToggle
                 ConnectionStatusView(state: viewModel.connectionHealth)
             }
@@ -256,7 +279,7 @@ struct ChartContainerView: View {
 
     @ViewBuilder
     private var chartZStack: some View {
-        let klines = viewModel.klineStore.klines
+        let klines = viewModel.visibleKlines
         let (pMin, pRange) = priceExtents(klines)
 
         VStack(spacing: 0) {
