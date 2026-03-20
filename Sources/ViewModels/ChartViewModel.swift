@@ -25,6 +25,25 @@ final class ChartViewModel {
     let tradeStore = TradeStore()
     var connectionState: ConnectionState = .disconnected
     var chartMode: ChartMode = .candlestick
+
+    /// Aggregate connection health across kline, depth, and trades streams.
+    /// Returns the worst state: `.connected` only if the service reports connected
+    /// AND all three stream tasks are alive. `.reconnecting` if any stream is in recovery.
+    var connectionHealth: ConnectionState {
+        let serviceState = service.connectionState
+        // If the service itself is not connected, that's the overall state.
+        if serviceState != .connected {
+            return serviceState
+        }
+        // Service reports connected but check if all stream tasks are alive.
+        // A nil or cancelled task means that stream is effectively disconnected.
+        let depthAlive = depthStreamTask != nil && !(depthStreamTask?.isCancelled ?? true)
+        let tradesAlive = tradesStreamTask != nil && !(tradesStreamTask?.isCancelled ?? true)
+        if !depthAlive || !tradesAlive {
+            return .reconnecting   // Service OK but subsidiary streams are down
+        }
+        return .connected
+    }
     var currentSymbol = "BTCUSDT"
     var currentInterval = "1m"
     var isLoading = false

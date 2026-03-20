@@ -105,6 +105,25 @@ struct ChartContainerView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: viewModel.triggeredAlert?.id)
+        // ── Reconnection banner — slides in from top when any stream is recovering ──
+        .overlay(alignment: .top) {
+            if viewModel.connectionHealth == .reconnecting {
+                HStack(spacing: 12) {
+                    ProgressView()
+                        .tint(.white)
+                    Text("Reconnecting to Binance…")
+                        .font(.title3)
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(AppTheme.stateReconnecting.opacity(0.9))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.badgeCornerRadius))
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .padding(.top, AppTheme.edgePadding + 60)  // offset below alert banner space
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: viewModel.connectionHealth)
     }
 
     // MARK: - Header row
@@ -124,7 +143,7 @@ struct ChartContainerView: View {
 
             // Right: chart mode toggle + connection indicator
             chartModeToggle
-            ConnectionStatusView(state: viewModel.connectionState)
+            ConnectionStatusView(state: viewModel.connectionHealth)
         }
         .padding(.bottom, AppTheme.sectionSpacing)
     }

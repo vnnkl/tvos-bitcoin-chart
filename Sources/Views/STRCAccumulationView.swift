@@ -26,33 +26,33 @@ struct STRCAccumulationView: View {
 
     // MARK: - Formatters
 
-    private var btcFormatter: NumberFormatter {
-        let f = NumberFormatter()
+    private static let btcFormatter: NumberFormatter = {
+        let f: NumberFormatter = .init()
         f.numberStyle = .decimal
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 4
         f.groupingSeparator = ","
         f.usesGroupingSeparator = true
         return f
-    }
+    }()
 
-    private var proceedsFormatter: NumberFormatter {
-        let f = NumberFormatter()
+    private static let proceedsFormatter: NumberFormatter = {
+        let f: NumberFormatter = .init()
         f.numberStyle = .currency
         f.currencyCode = "USD"
         f.minimumFractionDigits = 1
         f.maximumFractionDigits = 2
         // Display in billions
         return f
-    }
+    }()
 
-    private var sharesFormatter: NumberFormatter {
-        let f = NumberFormatter()
+    private static let sharesFormatter: NumberFormatter = {
+        let f: NumberFormatter = .init()
         f.numberStyle = .decimal
         f.usesGroupingSeparator = true
         f.maximumFractionDigits = 0
         return f
-    }
+    }()
 
     // MARK: - Body
 
@@ -76,7 +76,7 @@ struct STRCAccumulationView: View {
                 summaryCell(
                     icon: "bitcoinsign.circle.fill",
                     label: "Est. BTC Purchased",
-                    value: btcFormatter.string(from: NSNumber(value: totalEstimatedBTC)) ?? "0",
+                    value: Self.btcFormatter.string(from: NSNumber(value: totalEstimatedBTC)) ?? "0",
                     valueColor: AppTheme.strcAccent
                 )
                 summaryCell(
@@ -88,7 +88,7 @@ struct STRCAccumulationView: View {
                 summaryCell(
                     icon: "chart.bar.fill",
                     label: "Shares Sold",
-                    value: sharesFormatter.string(from: NSNumber(value: totalShares)) ?? "0",
+                    value: Self.sharesFormatter.string(from: NSNumber(value: totalShares)) ?? "0",
                     valueColor: AppTheme.textPrimary
                 )
             }
