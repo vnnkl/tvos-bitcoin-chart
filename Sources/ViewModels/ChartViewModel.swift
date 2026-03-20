@@ -20,6 +20,7 @@ final class ChartViewModel {
     // MARK: - Public state (observed by views)
 
     let klineStore = KlineStore()
+    let orderBookStore = OrderBookStore()
     var connectionState: ConnectionState = .disconnected
     var chartMode: ChartMode = .candlestick
     var currentSymbol = "BTCUSDT"
@@ -31,6 +32,7 @@ final class ChartViewModel {
 
     private let service: any ExchangeDataService
     private var streamTask: Task<Void, Never>?
+    private var depthStreamTask: Task<Void, Never>?
     private var stateObserverTask: Task<Void, Never>?
 
     // MARK: - Init
@@ -55,6 +57,8 @@ final class ChartViewModel {
         logger.info("ChartViewModel.stop()")
         streamTask?.cancel()
         streamTask = nil
+        depthStreamTask?.cancel()
+        depthStreamTask = nil
         service.disconnect()
         connectionState = .disconnected
     }
@@ -64,9 +68,12 @@ final class ChartViewModel {
         logger.info("Switching interval to \(interval)")
         currentInterval = interval
         streamTask?.cancel()
+        depthStreamTask?.cancel()
         streamTask = Task {
-            // Clear store before reloading so the chart shows empty → new data
+            // Clear stores before reloading so the chart shows empty → new data.
+            // Depth history is tied to visual context — clear it too when interval changes.
             klineStore.loadHistorical([])
+            orderBookStore.clear()
             await loadAndStream(symbol: currentSymbol, interval: interval)
         }
     }
@@ -95,6 +102,23 @@ final class ChartViewModel {
         // WebSocketManager handles reconnection internally; we just consume the stream.
         // Any thrown error is caught here — the ViewModel records it and the
         // ConnectionState enum surface lets the view show the current health.
+
+        // 2a. Start depth stream concurrently — independent of kline stream lifecycle.
+        depthStreamTask?.cancel()
+        depthStreamTask = Task { [weak self] in
+            guard let self else { return }
+            let depthStream = service.subscribeOrderBook(symbol: symbol)
+            do {
+                for try await snapshot in depthStream {
+                    guard !Task.isCancelled else { break }
+                    orderBookStore.append(snapshot)
+                }
+            } catch {
+                logger.error("Depth stream error: \(error.localizedDescription)")
+            }
+        }
+
+        // 2b. Subscribe to kline live stream on the current Task.
         let liveStream = service.subscribeKlines(symbol: symbol, interval: interval)
         do {
             for try await kline in liveStream {
