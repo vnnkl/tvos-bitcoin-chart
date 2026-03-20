@@ -64,4 +64,22 @@ enum AppTheme {
 
     static let cardCornerRadius: CGFloat   = 12
     static let badgeCornerRadius: CGFloat  = 8
+
+    // MARK: - Heatmap
+
+    /// Near-black dark blue — lowest liquidity (cold end of thermal palette).
+    static let heatmapCold    = Color(red: 0.0, green: 0.0, blue: 0.15)
+    /// Blue — low liquidity.
+    static let heatmapCool    = Color(red: 0.0, green: 0.0, blue: 0.6)
+    /// Teal-green — moderate liquidity.
+    static let heatmapMedium  = Color(red: 0.0, green: 0.6, blue: 0.3)
+    /// Green — above-average liquidity.
+    static let heatmapWarm    = Color(red: 0.0, green: 0.8, blue: 0.0)
+    /// Yellow — high liquidity.
+    static let heatmapHot     = Color(red: 1.0, green: 0.9, blue: 0.0)
+    /// White — extreme liquidity walls (hottest end of thermal palette).
+    static let heatmapExtreme = Color(red: 1.0, green: 1.0, blue: 1.0)
+
+    /// Opacity used when compositing the heatmap behind candlesticks.
+    static let heatmapOpacity: Double = 0.6
 }
