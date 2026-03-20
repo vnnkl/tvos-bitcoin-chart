@@ -46,6 +46,15 @@ final class ChartViewModel {
         return klineStore.klines[idx]
     }
 
+    // MARK: - Alert state
+
+    /// Injected by ContentView so the ViewModel can fire crossing checks on each live tick.
+    var alertStore: AlertStore?
+
+    /// The most recently fired alert — drives `AlertBannerView`. `nil` when no banner is showing.
+    /// Auto-cleared after 3 seconds by a `Task.sleep` spawned on each fire.
+    var triggeredAlert: PriceAlert? = nil
+
     // MARK: - Private
 
     private(set) var service: any ExchangeDataService
@@ -210,6 +219,8 @@ final class ChartViewModel {
             for try await kline in liveStream {
                 guard !Task.isCancelled else { break }
                 let prevCount = klineStore.klines.count
+                // Capture price BEFORE applying the live update for crossing detection.
+                let prevPrice = klineStore.currentPrice
                 klineStore.applyLive(kline)
                 let newCount = klineStore.klines.count
                 // Stability: when exploring, if the klines array didn't grow (a trim happened),
@@ -218,6 +229,27 @@ final class ChartViewModel {
                     crosshairIndex = idx - 1
                 }
                 connectionState = service.connectionState
+
+                // Alert crossing detection: check every enabled, un-triggered alert.
+                if let store = alertStore {
+                    let fired = store.check(
+                        currentPrice: klineStore.currentPrice,
+                        previousPrice: prevPrice
+                    )
+                    if let first = fired.first {
+                        logger.info(
+                            "Alert fired: id=\(first.id) price=\(first.price) direction=\(first.direction.rawValue)"
+                        )
+                        triggeredAlert = first
+                        // Auto-dismiss banner after 3 seconds.
+                        let firedID = first.id
+                        Task { @MainActor [weak self] in
+                            try? await Task.sleep(for: .seconds(3))
+                            guard let self else { return }
+                            if triggeredAlert?.id == firedID { triggeredAlert = nil }
+                        }
+                    }
+                }
             }
         } catch {
             logger.error("Live stream error: \(error.localizedDescription)")

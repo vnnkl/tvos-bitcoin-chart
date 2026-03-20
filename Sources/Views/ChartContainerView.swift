@@ -21,6 +21,9 @@ import SwiftUI
 struct ChartContainerView: View {
 
     @Bindable var viewModel: ChartViewModel
+    /// Passed in from ContentView so alert lines can be drawn from the same store
+    /// that `SettingsView` and `ChartViewModel` share.
+    var alertStore: AlertStore?
 
     /// Tracks whether the chart ZStack has focus (for crosshair interaction).
     @FocusState private var chartFocused: Bool
@@ -93,6 +96,15 @@ struct ChartContainerView: View {
             .padding(AppTheme.edgePadding)
         }
         .background(AppTheme.background.ignoresSafeArea())
+        // ── Alert banner overlay — slides in from top on threshold crossing ──
+        .overlay(alignment: .top) {
+            if let alert = viewModel.triggeredAlert {
+                AlertBannerView(alert: alert)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .padding(.top, AppTheme.edgePadding)
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: viewModel.triggeredAlert?.id)
     }
 
     // MARK: - Header row
@@ -214,6 +226,13 @@ struct ChartContainerView: View {
             case .line:
                 LineChartView(klines: klines)
             }
+
+            // Alert price level overlays — dashed horizontal lines at each configured threshold.
+            AlertOverlayView(
+                alerts: alertStore?.alerts.filter { $0.isEnabled } ?? [],
+                priceMin: pMin,
+                priceRange: pRange
+            )
 
             // Crosshair overlay — shown only when exploring and index is valid
             if viewModel.isExploring,
