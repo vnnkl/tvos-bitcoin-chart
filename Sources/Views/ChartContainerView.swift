@@ -32,7 +32,7 @@ struct ChartContainerView: View {
 
                 // ── Header bar ─────────────────────────────────────
                 headerBar
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 2)
 
                 // Thin separator below header
                 Rectangle()
@@ -97,11 +97,12 @@ struct ChartContainerView: View {
                         .focusSection()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.top, 8)
+                .padding(.top, 2)
             }
-            .padding(.horizontal, 5)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 0)
+            .padding(.vertical, 0)
         }
+        .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
         .background(AppTheme.background.ignoresSafeArea())
         // ── Alert banner ──
         .overlay(alignment: .top) {
