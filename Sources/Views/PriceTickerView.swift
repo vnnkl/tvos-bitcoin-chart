@@ -11,6 +11,24 @@ struct PriceTickerView: View {
     var symbol: String = "BTC/USDT"
     var interval: String = "1m"
 
+    private static let priceFormatter: NumberFormatter = {
+        let formatter: NumberFormatter = .init()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        formatter.groupingSeparator = ","
+        formatter.usesGroupingSeparator = true
+        return formatter
+    }()
+
+    private static let changeFormatter: NumberFormatter = {
+        let formatter: NumberFormatter = .init()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        return formatter
+    }()
+
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 20) {
             // Symbol + interval badge
@@ -43,22 +61,12 @@ struct PriceTickerView: View {
     // MARK: - Private
 
     private var formattedPrice: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        formatter.groupingSeparator = ","
-        formatter.usesGroupingSeparator = true
-        return formatter.string(from: price as NSDecimalNumber) ?? "\(price)"
+        Self.priceFormatter.string(from: price as NSDecimalNumber) ?? "\(price)"
     }
 
     private var formattedChange: String {
         let sign = change24h >= 0 ? "+" : ""
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        return "\(sign)\(formatter.string(from: change24h as NSDecimalNumber) ?? "\(change24h)")%"
+        return "\(sign)\(Self.changeFormatter.string(from: change24h as NSDecimalNumber) ?? "\(change24h)")%"
     }
 
     private var changeColor: Color {

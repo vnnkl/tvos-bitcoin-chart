@@ -16,7 +16,7 @@ struct AlertBannerView: View {
     let alert: PriceAlert
 
     private static let priceFormatter: NumberFormatter = {
-        let f = NumberFormatter()
+        let f: NumberFormatter = .init()
         f.numberStyle = .decimal
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 2
