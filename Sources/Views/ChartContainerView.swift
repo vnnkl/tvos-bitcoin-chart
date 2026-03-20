@@ -22,6 +22,9 @@ struct ChartContainerView: View {
 
     @Bindable var viewModel: ChartViewModel
 
+    /// Tracks whether the chart ZStack has focus (for crosshair interaction).
+    @FocusState private var chartFocused: Bool
+
     var body: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
@@ -36,7 +39,41 @@ struct ChartContainerView: View {
                     VStack(spacing: 0) {
                         chartArea
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            // Visual feedback: subtle border when chart area is focused
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppTheme.badgeCornerRadius)
+                                    .stroke(
+                                        chartFocused
+                                            ? AppTheme.textSecondary.opacity(0.5)
+                                            : Color.clear,
+                                        lineWidth: 2
+                                    )
+                            )
+                            .focusable()
+                            .focused($chartFocused)
                             .focusSection()
+                            // Enter crosshair with Play/Pause button
+                            .onPlayPauseCommand {
+                                if viewModel.isExploring {
+                                    viewModel.exitExploration()
+                                } else {
+                                    viewModel.enterExploration()
+                                }
+                            }
+                            // Navigate crosshair with directional buttons
+                            .onMoveCommand { direction in
+                                if viewModel.isExploring {
+                                    viewModel.moveCrosshair(direction)
+                                } else if direction == .left || direction == .right {
+                                    // Allow entering exploration by swiping left/right
+                                    viewModel.enterExploration()
+                                    viewModel.moveCrosshair(direction)
+                                }
+                            }
+                            // Exit crosshair with Menu button
+                            .onExitCommand {
+                                viewModel.exitExploration()
+                            }
 
                         VolumeBarView(klines: viewModel.klineStore.klines)
                             .frame(
@@ -156,7 +193,7 @@ struct ChartContainerView: View {
         .frame(width: 360)
     }
 
-    // MARK: - Chart area (ZStack: heatmap → chart → loading indicator)
+    // MARK: - Chart area (ZStack: heatmap → chart → crosshair → loading indicator)
 
     @ViewBuilder
     private var chartArea: some View {
@@ -176,6 +213,18 @@ struct ChartContainerView: View {
                 CandlestickChartView(klines: klines)
             case .line:
                 LineChartView(klines: klines)
+            }
+
+            // Crosshair overlay — shown only when exploring and index is valid
+            if viewModel.isExploring,
+               let idx = viewModel.crosshairIndex,
+               !klines.isEmpty {
+                CrosshairOverlayView(
+                    klines: klines,
+                    crosshairIndex: idx,
+                    priceMin: pMin,
+                    priceRange: pRange
+                )
             }
 
             if viewModel.isLoading {
