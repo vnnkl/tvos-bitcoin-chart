@@ -24,6 +24,7 @@ struct ChartContainerView: View {
     var alertStore: AlertStore?
 
     @FocusState private var chartFocused: Bool
+    @FocusState private var focusedMode: ChartMode?
 
     var body: some View {
         GeometryReader { geometry in
@@ -241,12 +242,34 @@ struct ChartContainerView: View {
 
     @ViewBuilder
     private var chartModeToggle: some View {
-        Picker("", selection: $viewModel.chartMode) {
-            Text("Candle").tag(ChartMode.candlestick)
-            Text("Line").tag(ChartMode.line)
+        HStack(spacing: 8) {
+            chartModeButton(.candlestick, label: "Candle")
+            chartModeButton(.line,        label: "Line")
         }
-        .pickerStyle(.segmented)
-        .frame(width: 260)
+    }
+
+    @ViewBuilder
+    private func chartModeButton(_ mode: ChartMode, label: String) -> some View {
+        let isActive  = viewModel.chartMode == mode
+        let isFocused = focusedMode == mode
+
+        Button {
+            viewModel.chartMode = mode
+        } label: {
+            Text(label)
+                .font(.system(size: 24, weight: isActive ? .bold : .medium, design: .monospaced))
+                .foregroundStyle(isActive ? .black : AppTheme.textPrimary)
+                .frame(minWidth: 64, minHeight: 52)
+                .padding(.horizontal, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(isActive ? AppTheme.candleUp : Color(white: 0.12))
+                )
+        }
+        .buttonStyle(.plain)
+        .focused($focusedMode, equals: mode)
+        .scaleEffect(isFocused ? 1.15 : 1.0)
+        .animation(.easeInOut(duration: 0.15), value: isFocused)
     }
 
     // MARK: - Chart area
