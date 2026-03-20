@@ -11,6 +11,12 @@ enum AppTheme {
     /// Primary app background: absolute black for OLED-optimal contrast.
     static let background = Color.black
 
+    /// Slightly lifted surface for cards and sidebar panels.
+    static let surface = Color(white: 0.06)
+
+    /// Subtle separator lines between zones.
+    static let separator = Color(white: 0.15)
+
     // MARK: - Candle Colors
 
     /// Up candle (close > open): bright green, visible at TV viewing distance.
@@ -25,7 +31,8 @@ enum AppTheme {
     // MARK: - Text Colors
 
     static let textPrimary   = Color.white
-    static let textSecondary = Color(white: 0.6)
+    static let textSecondary = Color(white: 0.45)
+    static let textMuted     = Color(white: 0.30)
 
     // MARK: - Connection State Colors
 
@@ -36,10 +43,15 @@ enum AppTheme {
 
     // MARK: - Typography
 
+    /// Compact data font for sidebar numerical tables — smaller than title3
+    /// to fit price/qty columns without truncation at TV distance.
+    static let dataFont: Font     = .system(size: 22, weight: .medium, design: .monospaced)
+    /// Column header labels in tables.
+    static let dataHeaderFont: Font = .system(size: 18, weight: .semibold, design: .monospaced)
     /// Minimum font for body / secondary text — legible at 10 ft.
-    static let bodyFont: Font    = .title3
+    static let bodyFont: Font     = .title3
     /// Prominent price displays.
-    static let priceFont: Font   = .title
+    static let priceFont: Font    = .title
     /// Headlines and section titles.
     static let headlineFont: Font = .title2
 
@@ -49,7 +61,7 @@ enum AppTheme {
     static let edgePadding: CGFloat = 60
 
     /// Vertical spacing between major UI sections.
-    static let sectionSpacing: CGFloat = 24
+    static let sectionSpacing: CGFloat = 20
 
     // MARK: - Chart
 
@@ -58,12 +70,12 @@ enum AppTheme {
     /// Gap between adjacent candle bodies.
     static let candleSpacing: CGFloat   = 2
     /// Volume bar height as a fraction of the total chart height.
-    static let volumeHeightRatio: CGFloat = 0.2
+    static let volumeHeightRatio: CGFloat = 0.18
 
     // MARK: - Sidebar
 
     /// Fixed width for the right-side trading panel (order book + trades feed).
-    static let sidebarWidth: CGFloat = 340
+    static let sidebarWidth: CGFloat = 420
 
     // MARK: - Corner Radii
 

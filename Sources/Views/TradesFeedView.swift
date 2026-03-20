@@ -2,24 +2,8 @@ import SwiftUI
 
 /// Displays the most-recent aggregated trades in a scrolling feed.
 ///
-/// Reads `tradeStore.trades` reactively — `TradeStore` is `@Observable` so SwiftUI
-/// auto-tracks the dependency without copying into local state. The array is
-/// already most-recent-first (index 0 = newest), so the first rows in the list
-/// are always the freshest trades.
-///
-/// Layout:
-/// ```
-///   Time        Price       Qty         ← column headers (secondary)
-///   ─────────────────────────────────
-///   10:23:45   42,000.50   0.015        ← green for BUY, red for SELL
-///   10:23:44   41,998.00   0.002
-///   …
-/// ```
-///
-/// - BUY trades:  green (`AppTheme.candleUp`)
-/// - SELL trades: red   (`AppTheme.candleDown`)
-/// - Font: `.title3` minimum with `.monospacedDigit()`
-/// - Observability: `tradeStore.trades.count` — 0 means aggTrade stream not connected
+/// Uses compact monospaced data font. Time/price/qty columns
+/// right-aligned for scan-readability. BUY = green, SELL = red.
 struct TradesFeedView: View {
 
     let tradeStore: TradeStore
@@ -43,32 +27,26 @@ struct TradesFeedView: View {
     private static let qtyFormatter: NumberFormatter = {
         let f: NumberFormatter = .init()
         f.numberStyle = .decimal
-        f.minimumFractionDigits = 0
-        f.maximumFractionDigits = 5
+        f.minimumFractionDigits = 4
+        f.maximumFractionDigits = 4
         f.usesGroupingSeparator = false
         return f
     }()
 
-    // Display at most 25 trades to keep the sidebar compact
-    private let maxDisplayed = 25
+    private let maxDisplayed = 15
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Column headers
             headerRow
-                .padding(.bottom, 6)
-
-            Divider()
-                .overlay(AppTheme.textSecondary)
                 .padding(.bottom, 4)
 
             if tradeStore.trades.isEmpty {
                 Text("Connecting…")
-                    .font(AppTheme.bodyFont)
+                    .font(AppTheme.dataFont)
                     .foregroundStyle(AppTheme.textSecondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             } else {
-                // ScrollView is read-only (no selection) — no focusable items inside
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVStack(spacing: 0) {
                         ForEach(tradeStore.trades.prefix(maxDisplayed), id: \.aggregateTradeId) { trade in
@@ -84,16 +62,15 @@ struct TradesFeedView: View {
 
     private var headerRow: some View {
         HStack(spacing: 0) {
-            Text("Time")
-                .frame(width: 80, alignment: .leading)
-            Text("Price")
+            Text("TIME")
+                .frame(width: 90, alignment: .leading)
+            Text("PRICE")
                 .frame(maxWidth: .infinity, alignment: .trailing)
-            Text("Qty")
+            Text("QTY")
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .font(AppTheme.bodyFont)
-        .foregroundStyle(AppTheme.textSecondary)
-        .monospacedDigit()
+        .font(AppTheme.dataHeaderFont)
+        .foregroundStyle(AppTheme.textMuted)
     }
 
     // MARK: - Trade row
@@ -102,17 +79,17 @@ struct TradesFeedView: View {
         let color = trade.isBuy ? AppTheme.candleUp : AppTheme.candleDown
         return HStack(spacing: 0) {
             Text(Self.timeFormatter.string(from: trade.time))
-                .foregroundStyle(color)
-                .frame(width: 80, alignment: .leading)
+                .foregroundStyle(AppTheme.textSecondary)
+                .frame(width: 105, alignment: .leading)
+                .lineLimit(1)
             Text(formatPrice(trade.price))
                 .foregroundStyle(color)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             Text(formatQty(trade.quantity))
-                .foregroundStyle(color)
+                .foregroundStyle(AppTheme.textPrimary.opacity(0.7))
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .font(AppTheme.bodyFont)
-        .monospacedDigit()
+        .font(AppTheme.dataFont)
         .padding(.vertical, 1)
     }
 
