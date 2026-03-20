@@ -55,7 +55,7 @@ struct SettingsView: View {
                 alertsSection
                     .focusSection()
             }
-            .padding(AppTheme.edgePadding)
+            .padding(5)
         }
         .background(AppTheme.background)
         .onAppear {

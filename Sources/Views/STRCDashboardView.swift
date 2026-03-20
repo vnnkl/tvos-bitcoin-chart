@@ -57,7 +57,7 @@ struct STRCDashboardView: View {
                 .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
         }
-        .padding(AppTheme.edgePadding)
+        .padding(5)
     }
 
     // MARK: - Main scroll content
@@ -83,8 +83,8 @@ struct STRCDashboardView: View {
                 STRCFilingsListView(filings: viewModel.store.filings)
                     .focusSection()
             }
-            .padding(.horizontal, AppTheme.edgePadding)
-            .padding(.vertical, AppTheme.sectionSpacing)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 5)
         }
     }
 
