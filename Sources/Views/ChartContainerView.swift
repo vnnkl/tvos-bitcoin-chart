@@ -99,8 +99,8 @@ struct ChartContainerView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.top, 8)
             }
-            .padding(.horizontal, AppTheme.edgePadding)
-            .padding(.vertical, 16)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 5)
         }
         .background(AppTheme.background.ignoresSafeArea())
         // ── Alert banner ──
