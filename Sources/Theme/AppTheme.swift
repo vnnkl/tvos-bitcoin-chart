@@ -70,6 +70,17 @@ enum AppTheme {
     static let cardCornerRadius: CGFloat   = 12
     static let badgeCornerRadius: CGFloat  = 8
 
+    // MARK: - STRC Dashboard
+
+    /// ATM Active status badge: green — company is actively issuing shares.
+    static let strcATMActive      = Color(red: 0.0,  green: 0.784, blue: 0.325)  // same as candleUp
+    /// ATM Standby status badge: yellow — share price is below par value.
+    static let strcATMStandby     = Color(red: 1.0,  green: 0.9,   blue: 0.0)
+    /// Dark card surface for STRC dashboard sections.
+    static let strcCardBackground = Color(white: 0.1)
+    /// Blue accent for highlights and labels on the STRC tab.
+    static let strcAccent         = Color(red: 0.2,  green: 0.6,   blue: 1.0)
+
     // MARK: - Heatmap
 
     /// Near-black dark blue — lowest liquidity (cold end of thermal palette).
