@@ -22,25 +22,24 @@ struct OrderBookLadderView: View {
 
     let orderBookStore: OrderBookStore
 
-    // Formatters are stateless value types; safe to create per-render on tvOS.
-    private var priceFormatter: NumberFormatter {
-        let f = NumberFormatter()
+    private static let priceFormatter: NumberFormatter = {
+        let f: NumberFormatter = .init()
         f.numberStyle = .decimal
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 2
         f.groupingSeparator = ","
         f.usesGroupingSeparator = true
         return f
-    }
+    }()
 
-    private var qtyFormatter: NumberFormatter {
-        let f = NumberFormatter()
+    private static let qtyFormatter: NumberFormatter = {
+        let f: NumberFormatter = .init()
         f.numberStyle = .decimal
         f.minimumFractionDigits = 0
         f.maximumFractionDigits = 5
         f.usesGroupingSeparator = false
         return f
-    }
+    }()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -175,10 +174,10 @@ struct OrderBookLadderView: View {
     }
 
     private func formatPrice(_ value: Decimal) -> String {
-        priceFormatter.string(from: value as NSDecimalNumber) ?? value.description
+        Self.priceFormatter.string(from: value as NSDecimalNumber) ?? value.description
     }
 
     private func formatQty(_ value: Decimal) -> String {
-        qtyFormatter.string(from: value as NSDecimalNumber) ?? value.description
+        Self.qtyFormatter.string(from: value as NSDecimalNumber) ?? value.description
     }
 }

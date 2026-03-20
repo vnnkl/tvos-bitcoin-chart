@@ -46,6 +46,7 @@ struct LineChartView: View {
             context.stroke(linePath, with: .color(AppTheme.candleUp), lineWidth: 2)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .drawingGroup()
     }
 }
 

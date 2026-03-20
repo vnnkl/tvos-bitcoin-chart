@@ -40,5 +40,6 @@ struct VolumeBarView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .drawingGroup()
     }
 }

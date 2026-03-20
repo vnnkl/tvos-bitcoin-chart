@@ -55,6 +55,7 @@ struct CandlestickChartView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .drawingGroup()
     }
 }
 

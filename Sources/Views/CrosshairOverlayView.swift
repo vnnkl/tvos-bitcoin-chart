@@ -106,7 +106,7 @@ private struct OHLCVTooltip: View {
     let kline: Kline
 
     private static let priceFormatter: NumberFormatter = {
-        let f = NumberFormatter()
+        let f: NumberFormatter = .init()
         f.numberStyle = .decimal
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 2
@@ -115,7 +115,7 @@ private struct OHLCVTooltip: View {
     }()
 
     private static let volFormatter: NumberFormatter = {
-        let f = NumberFormatter()
+        let f: NumberFormatter = .init()
         f.numberStyle = .decimal
         f.minimumFractionDigits = 4
         f.maximumFractionDigits = 4
