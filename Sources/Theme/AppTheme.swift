@@ -60,6 +60,11 @@ enum AppTheme {
     /// Volume bar height as a fraction of the total chart height.
     static let volumeHeightRatio: CGFloat = 0.2
 
+    // MARK: - Sidebar
+
+    /// Fixed width for the right-side trading panel (order book + trades feed).
+    static let sidebarWidth: CGFloat = 340
+
     // MARK: - Corner Radii
 
     static let cardCornerRadius: CGFloat   = 12

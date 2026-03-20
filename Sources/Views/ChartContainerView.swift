@@ -1,16 +1,23 @@
 import SwiftUI
 
-/// Composes the full chart UI into a single container:
-/// price header (symbol, price, 24h change), chart mode toggle, connection status,
-/// candlestick/line chart, and volume histogram.
+/// Composes the full chart UI into a terminal-style layout:
 ///
-/// Uses `@Bindable` so the segmented `Picker` can write back to
-/// `viewModel.chartMode` directly via `$viewModel.chartMode`.
+/// ```
+/// ┌────────────────────────────────────────────────────────┐
+/// │  [price/change]  [── timeframe bar ──]  [mode][status] │  ← header row
+/// ├──────────────────────────────────┬─────────────────────┤
+/// │                                  │  Order Book         │
+/// │  Chart (candlestick / line)      │  ─────────────────  │
+/// │  + heatmap overlay               │  Recent Trades      │
+/// │  + volume bars (bottom 20 %)     │                     │
+/// └──────────────────────────────────┴─────────────────────┘
+///                                    ▲ 340 pt fixed sidebar
+/// ```
 ///
-/// **Layout:** Header occupies natural height; chart fills the remaining vertical
-/// space; volume bars get `AppTheme.volumeHeightRatio` (20%) of the container height
-/// via `GeometryReader`. Edge padding of `AppTheme.edgePadding` (60 pt) is applied
-/// to the whole container, satisfying tvOS safe-area guidelines.
+/// **Focus sections:** the timeframe bar, chart area, and sidebar each form an
+/// independent `.focusSection()` so Siri Remote navigates between them cleanly.
+///
+/// Uses `@Bindable` so `$viewModel.chartMode` flows directly into the Picker.
 struct ChartContainerView: View {
 
     @Bindable var viewModel: ChartViewModel
@@ -18,31 +25,101 @@ struct ChartContainerView: View {
     var body: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
+
                 // ── Header row ─────────────────────────────────────────
-                HStack(alignment: .center, spacing: AppTheme.sectionSpacing) {
-                    priceSection
-                    Spacer()
-                    chartModeToggle
-                    Spacer()
-                    ConnectionStatusView(state: viewModel.connectionState)
+                headerRow
+
+                // ── Content: chart (left) + sidebar (right) ───────────
+                HStack(alignment: .top, spacing: 0) {
+
+                    // Left: chart + volume (fills remaining width)
+                    VStack(spacing: 0) {
+                        chartArea
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .focusSection()
+
+                        VolumeBarView(klines: viewModel.klineStore.klines)
+                            .frame(
+                                maxWidth: .infinity,
+                                maxHeight: geometry.size.height * AppTheme.volumeHeightRatio
+                            )
+                            .padding(.top, 12)
+                    }
+
+                    // Right: sidebar — order book + trades feed placeholders
+                    sidebar
+                        .frame(width: AppTheme.sidebarWidth)
+                        .focusSection()
                 }
-                .padding(.bottom, AppTheme.sectionSpacing)
-
-                // ── Main chart (fills remaining height) ───────────────
-                chartArea
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                // ── Volume histogram (20 % of container height) ───────
-                VolumeBarView(klines: viewModel.klineStore.klines)
-                    .frame(
-                        maxWidth: .infinity,
-                        maxHeight: geometry.size.height * AppTheme.volumeHeightRatio
-                    )
-                    .padding(.top, 12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .padding(AppTheme.edgePadding)
         }
         .background(AppTheme.background.ignoresSafeArea())
+    }
+
+    // MARK: - Header row
+
+    @ViewBuilder
+    private var headerRow: some View {
+        HStack(alignment: .center, spacing: AppTheme.sectionSpacing) {
+            // Left: symbol + live price + 24 h change
+            priceSection
+
+            // Center: 13 timeframe buttons (fills remaining horizontal space)
+            TimeframeSelectorView(
+                activeInterval: $viewModel.currentInterval,
+                onSelect: { viewModel.switchInterval($0) }
+            )
+            .frame(maxWidth: .infinity)
+
+            // Right: chart mode toggle + connection indicator
+            chartModeToggle
+            ConnectionStatusView(state: viewModel.connectionState)
+        }
+        .padding(.bottom, AppTheme.sectionSpacing)
+    }
+
+    // MARK: - Sidebar (placeholder content — wired to real views in T03)
+
+    @ViewBuilder
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: AppTheme.sectionSpacing) {
+            // Order book section placeholder
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Order Book")
+                    .font(AppTheme.headlineFont)
+                    .foregroundStyle(AppTheme.textPrimary)
+
+                Divider()
+                    .overlay(AppTheme.textSecondary)
+
+                Text("Connecting…")
+                    .font(AppTheme.bodyFont)
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Trades feed section placeholder
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Recent Trades")
+                    .font(AppTheme.headlineFont)
+                    .foregroundStyle(AppTheme.textPrimary)
+
+                Divider()
+                    .overlay(AppTheme.textSecondary)
+
+                Text("Connecting…")
+                    .font(AppTheme.bodyFont)
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.leading, AppTheme.sectionSpacing)
     }
 
     // MARK: - Header: price section
@@ -50,15 +127,10 @@ struct ChartContainerView: View {
     @ViewBuilder
     private var priceSection: some View {
         HStack(alignment: .firstTextBaseline, spacing: 20) {
-            // Symbol + interval badge
-            VStack(alignment: .leading, spacing: 4) {
-                Text("BTC/USDT")
-                    .font(AppTheme.headlineFont)           // .title2
-                    .foregroundStyle(AppTheme.textPrimary)
-                Text(viewModel.currentInterval)
-                    .font(AppTheme.bodyFont)               // .title3 minimum
-                    .foregroundStyle(AppTheme.textSecondary)
-            }
+            // Symbol badge only (interval now lives in the timeframe selector)
+            Text("BTC/USDT")
+                .font(AppTheme.headlineFont)           // .title2
+                .foregroundStyle(AppTheme.textPrimary)
 
             // Live price
             Text(formattedPrice)
@@ -69,14 +141,14 @@ struct ChartContainerView: View {
 
             // 24 h change
             Text(formattedChange)
-                .font(AppTheme.priceFont)                  // .title
+                .font(AppTheme.priceFont)              // .title
                 .foregroundStyle(changeColor)
                 .monospacedDigit()
                 .contentTransition(.numericText())
         }
     }
 
-    // MARK: - Header: chart mode toggle (Siri Remote focusable)
+    // MARK: - Header: chart mode toggle
 
     @ViewBuilder
     private var chartModeToggle: some View {
@@ -88,7 +160,7 @@ struct ChartContainerView: View {
         .frame(width: 360)
     }
 
-    // MARK: - Chart area
+    // MARK: - Chart area (ZStack: heatmap → chart → loading indicator)
 
     @ViewBuilder
     private var chartArea: some View {
@@ -96,9 +168,6 @@ struct ChartContainerView: View {
         let (pMin, pRange) = priceExtents(klines)
 
         ZStack {
-            // Thermal heatmap renders first (behind candlesticks/line chart).
-            // klineCount is intentionally from klineStore — not orderBookStore.snapshots.count —
-            // so the X-axis columns align 1:1 with candlestick slots.
             DepthHeatmapView(
                 snapshots: viewModel.orderBookStore.snapshots,
                 klineCount: max(klines.count, 1),
