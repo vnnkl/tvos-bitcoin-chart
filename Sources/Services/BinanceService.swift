@@ -8,6 +8,7 @@ private let logger = Logger(subsystem: "com.bitcointerminal.websocket", category
 /// - REST endpoint: `https://api.binance.com/api/v3/uiKlines`
 /// - WebSocket (klines): `wss://stream.binance.com:9443/ws/<symbol>@kline_<interval>`
 /// - WebSocket (depth): `wss://stream.binance.com:9443/ws/<symbol>@depth20@100ms`
+/// - WebSocket (trades): `wss://stream.binance.com:9443/ws/<symbol>@aggTrade`
 final class BinanceService: ExchangeDataService, @unchecked Sendable {
 
     // MARK: - Configuration
@@ -17,6 +18,7 @@ final class BinanceService: ExchangeDataService, @unchecked Sendable {
     private let urlSession: URLSession
     private let webSocketManager: WebSocketManager
     private let depthWebSocketManager: WebSocketManager
+    private let tradesWebSocketManager: WebSocketManager
 
     // MARK: - ExchangeDataService
 
@@ -29,11 +31,13 @@ final class BinanceService: ExchangeDataService, @unchecked Sendable {
     init(
         urlSession: URLSession = .shared,
         webSocketManager: WebSocketManager = WebSocketManager(),
-        depthWebSocketManager: WebSocketManager = WebSocketManager()
+        depthWebSocketManager: WebSocketManager = WebSocketManager(),
+        tradesWebSocketManager: WebSocketManager = WebSocketManager()
     ) {
         self.urlSession = urlSession
         self.webSocketManager = webSocketManager
         self.depthWebSocketManager = depthWebSocketManager
+        self.tradesWebSocketManager = tradesWebSocketManager
     }
 
     // MARK: - REST
@@ -135,12 +139,49 @@ final class BinanceService: ExchangeDataService, @unchecked Sendable {
         }
     }
 
+    // MARK: - WebSocket: Aggregate Trades
+
+    /// Streams live aggregate trades for `symbol`.
+    ///
+    /// Connects to `wss://stream.binance.com:9443/ws/<symbol>@aggTrade`.
+    ///
+    /// - Observability: connect/disconnect/errors logged under subsystem
+    ///   `"com.bitcointerminal.websocket"` category `"BinanceService"`.
+    func subscribeTrades(symbol: String) -> AsyncThrowingStream<AggTrade, Error> {
+        let path = "\(symbol.lowercased())@aggTrade"
+        guard let url = URL(string: "\(wsBaseURL)\(path)") else {
+            return AsyncThrowingStream { $0.finish(throwing: URLError(.badURL)) }
+        }
+
+        logger.info("Subscribing to aggTrade stream: \(url.absoluteString)")
+        let messageStream = tradesWebSocketManager.connect(to: url)
+
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    for try await message in messageStream {
+                        guard case .string(let text) = message else { continue }
+                        guard let data = text.data(using: .utf8) else { continue }
+                        let trade = try JSONDecoder().decode(AggTrade.self, from: data)
+                        continuation.yield(trade)
+                    }
+                    continuation.finish()
+                } catch {
+                    logger.error("aggTrade stream error: \(error.localizedDescription)")
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     // MARK: - Lifecycle
 
-    /// Disconnects all active WebSocket connections (klines + depth).
+    /// Disconnects all active WebSocket connections (klines + depth + trades).
     func disconnect() {
-        logger.info("BinanceService.disconnect() — disconnecting kline and depth streams")
+        logger.info("BinanceService.disconnect() — disconnecting kline, depth, and trades streams")
         webSocketManager.disconnect()
         depthWebSocketManager.disconnect()
+        tradesWebSocketManager.disconnect()
     }
 }
