@@ -259,43 +259,58 @@ struct ChartContainerView: View {
         let klines = viewModel.klineStore.klines
         let (pMin, pRange) = priceExtents(klines)
 
-        ZStack {
-            DepthHeatmapView(
-                snapshots: viewModel.orderBookStore.snapshots,
-                klineCount: max(klines.count, 1),
-                priceMin: pMin,
-                priceRange: pRange
-            )
+        VStack(spacing: 0) {
+            // Chart canvas + price axis side-by-side
+            HStack(spacing: 0) {
+                ZStack {
+                    DepthHeatmapView(
+                        snapshots: viewModel.orderBookStore.snapshots,
+                        klineCount: max(klines.count, 1),
+                        priceMin: pMin,
+                        priceRange: pRange
+                    )
 
-            switch viewModel.chartMode {
-            case .candlestick:
-                CandlestickChartView(klines: klines)
-            case .line:
-                LineChartView(klines: klines)
+                    switch viewModel.chartMode {
+                    case .candlestick:
+                        CandlestickChartView(klines: klines)
+                    case .line:
+                        LineChartView(klines: klines)
+                    }
+
+                    AlertOverlayView(
+                        alerts: alertStore?.alerts.filter { $0.isEnabled } ?? [],
+                        priceMin: pMin,
+                        priceRange: pRange
+                    )
+
+                    if viewModel.isExploring,
+                       let idx = viewModel.crosshairIndex,
+                       !klines.isEmpty {
+                        CrosshairOverlayView(
+                            klines: klines,
+                            crosshairIndex: idx,
+                            priceMin: pMin,
+                            priceRange: pRange
+                        )
+                    }
+
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .tint(AppTheme.textPrimary)
+                            .scaleEffect(1.5)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                // Price Y-axis panel on the right edge
+                PriceAxisView(priceMin: pMin, priceRange: pRange)
+                    .frame(width: AppTheme.priceAxisWidth)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            AlertOverlayView(
-                alerts: alertStore?.alerts.filter { $0.isEnabled } ?? [],
-                priceMin: pMin,
-                priceRange: pRange
-            )
-
-            if viewModel.isExploring,
-               let idx = viewModel.crosshairIndex,
-               !klines.isEmpty {
-                CrosshairOverlayView(
-                    klines: klines,
-                    crosshairIndex: idx,
-                    priceMin: pMin,
-                    priceRange: pRange
-                )
-            }
-
-            if viewModel.isLoading {
-                ProgressView()
-                    .tint(AppTheme.textPrimary)
-                    .scaleEffect(1.5)
-            }
+            // Time X-axis bar below chart + price axis
+            TimeAxisView(klines: klines, currentInterval: viewModel.currentInterval)
+                .frame(height: AppTheme.timeAxisHeight)
         }
     }
 

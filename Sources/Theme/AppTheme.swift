@@ -101,6 +101,20 @@ enum AppTheme {
     /// Alert firing banner background (orange — distinct from yellow line).
     static let alertBanner = Color(red: 1.0, green: 0.6, blue: 0.0)
 
+    // MARK: - Axes
+
+    /// Compact monospaced font for price and time axis labels — legible at TV distance.
+    static let axisFont: Font = .system(size: 18, weight: .medium, design: .monospaced)
+
+    /// Subtle gray for axis tick labels — matches `textSecondary` lightness.
+    static let axisLabelColor: Color = Color(white: 0.45)
+
+    /// Reserved width on the right edge for the price Y-axis panel.
+    static let priceAxisWidth: CGFloat = 90
+
+    /// Height of the time X-axis bar below the chart area.
+    static let timeAxisHeight: CGFloat = 30
+
     // MARK: - Heatmap
 
     /// Near-black dark blue — lowest liquidity (cold end of thermal palette).
