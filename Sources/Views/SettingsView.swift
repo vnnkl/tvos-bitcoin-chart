@@ -3,7 +3,7 @@ import OSLog
 
 private let logger = Logger(subsystem: "com.bitcointerminal.websocket", category: "SettingsView")
 
-/// tvOS settings screen accessible via the third tab in the main TabView.
+/// tvOS settings screen accessible via the third tab in the custom tab switcher.
 ///
 /// Three focus-isolated sections per tvOS Focus Engine best practices:
 /// 1. **Exchange** — switches live data source between Binance and Stub (R009).

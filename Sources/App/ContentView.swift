@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// Root view: `TabView` with Chart tab (live BTC/USDT data), STRC tab (live strc.live data),
-/// and Settings tab (exchange selection, default timeframe, price alerts).
+/// Root view: custom tab switcher with a floating auto-hiding tab bar overlay.
 ///
-/// All three ViewModels / stores are instantiated here as `@State` so they are owned by
-/// this view and survive tab switches. `scenePhase` is observed here (not in the App entry
-/// point) because `@State` lives at the view hierarchy level.
+/// The three view models / stores are owned here as `@State` so they survive tab
+/// switches. `scenePhase` is observed here (not in the App entry point) because
+/// `@State` lives at the view hierarchy level.
 ///
 /// Lifecycle contract:
 /// - `.active`     → `viewModel.start()` + `strcViewModel.start()` — begins data load
@@ -16,43 +15,54 @@ import SwiftUI
 /// `appSettings.defaultInterval` is applied to `viewModel.currentInterval` on first `.active`
 /// phase if the persisted default differs from the ViewModel's built-in default.
 ///
-/// **Note:** The `Tab {}` constructor requires tvOS 18+. We use the tvOS-17-compatible
-/// `.tabItem {}` modifier pattern instead, which uses the same tab bar presentation.
+/// **Tab navigation (custom tab switcher):**
+/// `selectedTab` drives which content view is rendered. Swipe up to reveal the floating
+/// pill tab bar overlay; it auto-hides after ~3 seconds once focus leaves it. The tab bar
+/// is always present in the view hierarchy after the disclaimer is dismissed (opacity-
+/// controlled, not conditionally rendered) so the tvOS Focus Engine can navigate to it
+/// via upward swipe at any time.
 struct ContentView: View {
 
-    @State var viewModel    = ChartViewModel(service: BinanceService())
+    // MARK: - Owned state / stores
+
+    @State var viewModel     = ChartViewModel(service: BinanceService())
     @State var strcViewModel = STRCViewModel()
-    @State var appSettings  = AppSettings()
-    @State var alertStore   = AlertStore()
+    @State var appSettings   = AppSettings()
+    @State var alertStore    = AlertStore()
     @State private var defaultsApplied = false
 
     @Environment(\.scenePhase) private var scenePhase
 
+    // MARK: - Tab switcher state
+
+    private enum Tab: String, CaseIterable {
+        case chart, strc, settings
+    }
+
+    @State private var selectedTab: Tab = .chart
+    @State private var tabBarVisible    = false
+    @FocusState private var focusedTab: Tab?
+    @State private var hideTask: Task<Void, Never>?
+
+    // MARK: - Body
+
     var body: some View {
         ZStack {
-            TabView {
-                // ── Chart tab ──────────────────────────────────────────────
-                ChartContainerView(viewModel: viewModel, alertStore: alertStore)
-                    .tabItem {
-                        Label("Chart", systemImage: "chart.bar")
-                    }
-
-                // ── STRC tab ───────────────────────────────────────────────
-                STRCDashboardView(viewModel: strcViewModel)
-                    .tabItem {
-                        Label("STRC", systemImage: "building.columns")
-                    }
-
-                // ── Settings tab ───────────────────────────────────────────
-                SettingsView(viewModel: viewModel, appSettings: appSettings, alertStore: alertStore)
-                    .tabItem {
-                        Label("Settings", systemImage: "gearshape")
-                    }
+            // ── Tab content ──────────────────────────────────────────────
+            Group {
+                switch selectedTab {
+                case .chart:
+                    ChartContainerView(viewModel: viewModel, alertStore: alertStore)
+                case .strc:
+                    STRCDashboardView(viewModel: strcViewModel)
+                case .settings:
+                    SettingsView(viewModel: viewModel, appSettings: appSettings, alertStore: alertStore)
+                }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 switch newPhase {
                 case .active:
-                    // Inject alertStore into viewModel so crossing detection has access to alerts.
+                    // Inject alertStore into viewModel so alert crossing detection works.
                     viewModel.alertStore = alertStore
                     // Apply persisted defaults on first activation only.
                     if !defaultsApplied {
@@ -71,15 +81,134 @@ struct ContentView: View {
                 }
             }
 
-            // Financial disclaimer — shown once on first launch, blocks tab interaction.
+            // ── Floating tab bar overlay ─────────────────────────────────
+            // Present only after the disclaimer is dismissed. The disclaimer's
+            // `.focusSection()` absorbs all Siri Remote input during onboarding.
+            // Visibility is opacity-controlled (not conditional) so the Focus
+            // Engine can always route swipe-up navigation to these buttons.
+            if appSettings.hasSeenDisclaimer {
+                tabBarOverlay
+            }
+
+            // ── Financial disclaimer — shown once on first launch ────────
             if !appSettings.hasSeenDisclaimer {
                 disclaimerOverlay
             }
         }
         .animation(.easeInOut, value: appSettings.hasSeenDisclaimer)
+        .onChange(of: focusedTab) { _, newTab in
+            if newTab != nil {
+                // Focus entered the tab bar — make it visible and cancel any pending hide.
+                tabBarVisible = true
+                hideTask?.cancel()
+                hideTask = nil
+            } else {
+                // Focus left the tab bar — schedule auto-hide after 3 seconds.
+                hideTask?.cancel()
+                hideTask = Task {
+                    try? await Task.sleep(for: .seconds(3))
+                    await MainActor.run { tabBarVisible = false }
+                }
+            }
+        }
     }
 
-    // MARK: - Financial disclaimer overlay
+    // MARK: - Floating Tab Bar Overlay
+
+    /// Pill-style tab switcher anchored at the top of the screen.
+    ///
+    /// Opacity drives show/hide (not conditional rendering) so focusable buttons
+    /// remain in the view hierarchy at all times. The overlay auto-hides ~3 s after
+    /// focus leaves the section. Inspectable via `tabBarVisible` in the SwiftUI
+    /// debug inspector; inspect `hideTask` to confirm timer is running.
+    private var tabBarOverlay: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                // ── Chart button ────────────────────────────────────────
+                Button {
+                    selectedTab = .chart
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "chart.bar")
+                        Text("Chart")
+                    }
+                    .font(.system(size: 24, weight: selectedTab == .chart ? .bold : .medium))
+                    .foregroundStyle(selectedTab == .chart ? Color.black : AppTheme.textPrimary)
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 22)
+                            .fill(selectedTab == .chart ? AppTheme.candleUp : Color(white: 0.12))
+                    )
+                }
+                .buttonStyle(.plain)
+                .focusEffectDisabled()
+                .focused($focusedTab, equals: .chart)
+                .scaleEffect(focusedTab == .chart ? 1.15 : 1.0)
+                .animation(.easeInOut(duration: 0.15), value: focusedTab == .chart)
+
+                // ── STRC button ─────────────────────────────────────────
+                Button {
+                    selectedTab = .strc
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "building.columns")
+                        Text("STRC")
+                    }
+                    .font(.system(size: 24, weight: selectedTab == .strc ? .bold : .medium))
+                    .foregroundStyle(selectedTab == .strc ? Color.black : AppTheme.textPrimary)
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 22)
+                            .fill(selectedTab == .strc ? AppTheme.candleUp : Color(white: 0.12))
+                    )
+                }
+                .buttonStyle(.plain)
+                .focusEffectDisabled()
+                .focused($focusedTab, equals: .strc)
+                .scaleEffect(focusedTab == .strc ? 1.15 : 1.0)
+                .animation(.easeInOut(duration: 0.15), value: focusedTab == .strc)
+
+                // ── Settings button ─────────────────────────────────────
+                Button {
+                    selectedTab = .settings
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "gearshape")
+                        Text("Settings")
+                    }
+                    .font(.system(size: 24, weight: selectedTab == .settings ? .bold : .medium))
+                    .foregroundStyle(selectedTab == .settings ? Color.black : AppTheme.textPrimary)
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 22)
+                            .fill(selectedTab == .settings ? AppTheme.candleUp : Color(white: 0.12))
+                    )
+                }
+                .buttonStyle(.plain)
+                .focusEffectDisabled()
+                .focused($focusedTab, equals: .settings)
+                .scaleEffect(focusedTab == .settings ? 1.15 : 1.0)
+                .animation(.easeInOut(duration: 0.15), value: focusedTab == .settings)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+            .background(Color(white: 0.08).opacity(0.95))
+            .clipShape(RoundedRectangle(cornerRadius: 32))
+            .focusSection()
+            .onExitCommand { tabBarVisible = false }
+            .opacity(tabBarVisible ? 1 : 0)
+            .animation(.easeInOut(duration: 0.3), value: tabBarVisible)
+
+            Spacer()
+        }
+        .padding(.top, AppTheme.edgePadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Financial Disclaimer Overlay
 
     /// Full-screen one-time disclaimer overlay. Shown on first launch only; dismissed
     /// by tapping "I Understand", which persists `hasSeenDisclaimer = true`.
