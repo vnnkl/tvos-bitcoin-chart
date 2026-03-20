@@ -1,23 +1,22 @@
 import SwiftUI
 
-/// Root view: `TabView` with Chart tab (live BTC/USDT data) and STRC tab (placeholder).
+/// Root view: `TabView` with Chart tab (live BTC/USDT data) and STRC tab (live strc.live data).
 ///
-/// `ChartViewModel` is instantiated here as `@State` so it is owned by this view
-/// and survives tab switches. `scenePhase` is observed here (not in the App entry
-/// point) because `@State` lives at the view hierarchy level — the viewModel is
-/// not accessible from `BitcoinTerminalApp`.
+/// Both ViewModels are instantiated here as `@State` so they are owned by this view
+/// and survive tab switches. `scenePhase` is observed here (not in the App entry
+/// point) because `@State` lives at the view hierarchy level.
 ///
 /// Lifecycle contract:
-/// - `.active`     → `viewModel.start()` — begins REST historical load + WebSocket
-/// - `.background`/`.inactive` → `viewModel.stop()` — disconnects WebSocket
-///   (tvOS has no background execution budget; keeping a connection alive after
-///   backgrounding leads to silent stream death and stale state on return)
+/// - `.active`     → `viewModel.start()` + `strcViewModel.start()` — begins data load
+/// - `.background`/`.inactive` → `viewModel.stop()` + `strcViewModel.stop()` — pauses
+///   all network activity (tvOS has no background execution budget)
 ///
 /// **Note:** The `Tab {}` constructor requires tvOS 18+. We use the tvOS-17-compatible
 /// `.tabItem {}` modifier pattern instead, which uses the same tab bar presentation.
 struct ContentView: View {
 
     @State var viewModel = ChartViewModel(service: BinanceService())
+    @State var strcViewModel = STRCViewModel()
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -28,8 +27,8 @@ struct ContentView: View {
                     Label("Chart", systemImage: "chart.bar")
                 }
 
-            // ── STRC placeholder tab ───────────────────────────────────
-            strc
+            // ── STRC tab ───────────────────────────────────────────────
+            STRCDashboardView(viewModel: strcViewModel)
                 .tabItem {
                     Label("STRC", systemImage: "building.columns")
                 }
@@ -38,32 +37,13 @@ struct ContentView: View {
             switch newPhase {
             case .active:
                 viewModel.start()
+                strcViewModel.start()
             case .background, .inactive:
                 viewModel.stop()
+                strcViewModel.stop()
             @unknown default:
                 break
             }
-        }
-    }
-
-    // MARK: - STRC placeholder
-
-    @ViewBuilder
-    private var strc: some View {
-        ZStack {
-            AppTheme.background.ignoresSafeArea()
-            VStack(spacing: AppTheme.sectionSpacing) {
-                Image(systemName: "building.columns")
-                    .font(.system(size: 80))
-                    .foregroundStyle(AppTheme.textSecondary)
-                Text("STRC Dashboard")
-                    .font(AppTheme.headlineFont)           // .title2
-                    .foregroundStyle(AppTheme.textPrimary)
-                Text("Coming Soon")
-                    .font(AppTheme.bodyFont)               // .title3
-                    .foregroundStyle(AppTheme.textSecondary)
-            }
-            .padding(AppTheme.edgePadding)
         }
     }
 }
