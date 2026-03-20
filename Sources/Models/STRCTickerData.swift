@@ -93,9 +93,13 @@ struct DividendRecord: Codable, Sendable {
 // MARK: - BTC Correlation
 
 /// BTC correlation statistics for a ticker.
+///
+/// Both `current` and `windowDays` are optional because real API responses
+/// (e.g. SATA ticker) may return `"current": null` and omit `windowDays`
+/// entirely while still providing the `btcCorrelation` object wrapper.
 struct BTCCorrelation: Codable, Sendable {
-    let current: Double
-    let windowDays: Int
+    let current: Double?
+    let windowDays: Int?
     // `history` array omitted — not displayed on dashboard.
 }
 
