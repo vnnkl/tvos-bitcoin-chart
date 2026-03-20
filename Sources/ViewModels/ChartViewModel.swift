@@ -1,5 +1,6 @@
 import Foundation
 import OSLog
+import SwiftUI   // for MoveCommandDirection
 
 private let logger = Logger(subsystem: "com.bitcointerminal.websocket", category: "ChartViewModel")
 
@@ -28,6 +29,22 @@ final class ChartViewModel {
     var currentInterval = "1m"
     var isLoading = false
     var error: Error?
+
+    // MARK: - Crosshair / exploration state
+
+    /// True while the user is scrubbing through candle history with the Siri Remote.
+    var isExploring: Bool = false
+
+    /// Index into `klineStore.klines` currently under the crosshair.
+    /// `nil` when not exploring.
+    var crosshairIndex: Int? = nil
+
+    /// The kline under the crosshair, or `nil` when not exploring / index out of range.
+    var crosshairKline: Kline? {
+        guard let idx = crosshairIndex,
+              klineStore.klines.indices.contains(idx) else { return nil }
+        return klineStore.klines[idx]
+    }
 
     // MARK: - Private
 
@@ -70,6 +87,7 @@ final class ChartViewModel {
     /// Switch to a different interval: stop current stream, reload historical, re-subscribe.
     func switchInterval(_ interval: String) {
         logger.info("Switching interval to \(interval)")
+        exitExploration()     // leave crosshair mode when interval changes
         currentInterval = interval
         streamTask?.cancel()
         depthStreamTask?.cancel()
@@ -84,6 +102,38 @@ final class ChartViewModel {
             tradeStore.clear()
             await loadAndStream(symbol: currentSymbol, interval: interval)
         }
+    }
+
+    // MARK: - Crosshair interaction
+
+    /// Enter exploration mode: freeze auto-scroll, pin crosshair to the rightmost candle.
+    func enterExploration() {
+        guard !klineStore.klines.isEmpty else { return }
+        isExploring = true
+        crosshairIndex = klineStore.klines.count - 1
+        logger.info("Crosshair entered at index \(self.crosshairIndex ?? -1)")
+    }
+
+    /// Move the crosshair one candle left or right. Clamps to the klines array bounds.
+    func moveCrosshair(_ direction: MoveCommandDirection) {
+        guard isExploring, let current = crosshairIndex else { return }
+        let maxIndex = klineStore.klines.count - 1
+        switch direction {
+        case .left:
+            crosshairIndex = max(0, current - 1)
+        case .right:
+            crosshairIndex = min(maxIndex, current + 1)
+        default:
+            break  // ignore up/down
+        }
+    }
+
+    /// Exit exploration mode; return to live view.
+    func exitExploration() {
+        guard isExploring else { return }
+        isExploring = false
+        crosshairIndex = nil
+        logger.info("Crosshair exited, returning to live view")
     }
 
     // MARK: - Private: data pipeline
@@ -147,7 +197,14 @@ final class ChartViewModel {
         do {
             for try await kline in liveStream {
                 guard !Task.isCancelled else { break }
+                let prevCount = klineStore.klines.count
                 klineStore.applyLive(kline)
+                let newCount = klineStore.klines.count
+                // Stability: when exploring, if the klines array didn't grow (a trim happened),
+                // the crosshairIndex points to a different candle — decrement to compensate.
+                if isExploring, let idx = crosshairIndex, newCount == prevCount, idx > 0 {
+                    crosshairIndex = idx - 1
+                }
                 connectionState = service.connectionState
             }
         } catch {
