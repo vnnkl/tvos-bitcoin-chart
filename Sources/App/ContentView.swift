@@ -1,63 +1,69 @@
 import SwiftUI
 
-/// Root view that composes the full Bitcoin Terminal UI:
-/// - Price ticker at the top
-/// - Main chart (candlestick or line) in the centre
-/// - Volume histogram below the chart
-/// - Connection status indicator at the bottom-right
+/// Root view: `TabView` with Chart tab (live BTC/USDT data) and STRC tab (placeholder).
+///
+/// `ChartViewModel` is instantiated here as `@State` so it is owned by this view
+/// and survives tab switches. `scenePhase` is observed here (not in the App entry
+/// point) because `@State` lives at the view hierarchy level — the viewModel is
+/// not accessible from `BitcoinTerminalApp`.
+///
+/// Lifecycle contract:
+/// - `.active`     → `viewModel.start()` — begins REST historical load + WebSocket
+/// - `.background`/`.inactive` → `viewModel.stop()` — disconnects WebSocket
+///   (tvOS has no background execution budget; keeping a connection alive after
+///   backgrounding leads to silent stream death and stale state on return)
+///
+/// **Note:** The `Tab {}` constructor requires tvOS 18+. We use the tvOS-17-compatible
+/// `.tabItem {}` modifier pattern instead, which uses the same tab bar presentation.
 struct ContentView: View {
 
-    @State private var viewModel = ChartViewModel()
+    @State var viewModel = ChartViewModel(service: BinanceService())
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            AppTheme.background.ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                // --- Price ticker ---
-                PriceTickerView(
-                    price: viewModel.klineStore.currentPrice,
-                    change24h: viewModel.klineStore.priceChange24h,
-                    symbol: "BTC/USDT",
-                    interval: viewModel.currentInterval
-                )
-                .padding(.top, AppTheme.edgePadding)
-                .padding(.bottom, AppTheme.sectionSpacing)
-
-                // --- Main chart area ---
-                ZStack {
-                    switch viewModel.chartMode {
-                    case .candlestick:
-                        CandlestickChartView(klines: viewModel.klineStore.klines)
-                    case .line:
-                        LineChartView(klines: viewModel.klineStore.klines)
-                    }
-
-                    if viewModel.isLoading {
-                        ProgressView()
-                            .tint(AppTheme.textPrimary)
-                            .scaleEffect(1.5)
-                    }
+        TabView {
+            // ── Chart tab ──────────────────────────────────────────────
+            ChartContainerView(viewModel: viewModel)
+                .tabItem {
+                    Label("Chart", systemImage: "chart.bar")
                 }
-                .frame(maxWidth: .infinity)
-                .frame(maxHeight: .infinity)
 
-                // --- Volume bars (25 % of chart height by ratio) ---
-                VolumeBarView(klines: viewModel.klineStore.klines)
-                    .frame(
-                        maxWidth: .infinity,
-                        maxHeight: UIScreen.main.bounds.height * AppTheme.volumeHeightRatio
-                    )
-                    .padding(.bottom, AppTheme.sectionSpacing)
-            }
-
-            // --- Connection state indicator ---
-            ConnectionStatusView(state: viewModel.connectionState)
-                .padding(.trailing, AppTheme.edgePadding)
-                .padding(.bottom, AppTheme.edgePadding)
+            // ── STRC placeholder tab ───────────────────────────────────
+            strc
+                .tabItem {
+                    Label("STRC", systemImage: "building.columns")
+                }
         }
-        .task {
-            viewModel.start()
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .active:
+                viewModel.start()
+            case .background, .inactive:
+                viewModel.stop()
+            @unknown default:
+                break
+            }
+        }
+    }
+
+    // MARK: - STRC placeholder
+
+    @ViewBuilder
+    private var strc: some View {
+        ZStack {
+            AppTheme.background.ignoresSafeArea()
+            VStack(spacing: AppTheme.sectionSpacing) {
+                Image(systemName: "building.columns")
+                    .font(.system(size: 80))
+                    .foregroundStyle(AppTheme.textSecondary)
+                Text("STRC Dashboard")
+                    .font(AppTheme.headlineFont)           // .title2
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("Coming Soon")
+                    .font(AppTheme.bodyFont)               // .title3
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            .padding(AppTheme.edgePadding)
         }
     }
 }
