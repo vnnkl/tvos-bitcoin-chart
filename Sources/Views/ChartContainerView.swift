@@ -100,7 +100,7 @@ struct ChartContainerView: View {
                 .padding(.top, 8)
             }
             .padding(.horizontal, AppTheme.edgePadding)
-            .padding(.vertical, 40)
+            .padding(.vertical, 16)
         }
         .background(AppTheme.background.ignoresSafeArea())
         // ── Alert banner ──
