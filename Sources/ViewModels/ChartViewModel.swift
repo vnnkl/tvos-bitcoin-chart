@@ -48,7 +48,7 @@ final class ChartViewModel {
 
     // MARK: - Private
 
-    private let service: any ExchangeDataService
+    private(set) var service: any ExchangeDataService
     private var streamTask: Task<Void, Never>?
     private var depthStreamTask: Task<Void, Never>?
     private var tradesStreamTask: Task<Void, Never>?
@@ -82,6 +82,18 @@ final class ChartViewModel {
         tradesStreamTask = nil
         service.disconnect()
         connectionState = .disconnected
+    }
+
+    /// Swap in a new exchange service: tears down all streams, replaces the service, restarts.
+    ///
+    /// Observable via `viewModel.service` (type comparison) and logs:
+    /// `"ChartViewModel.switchExchange newService=<type>"` in the websocket category.
+    func switchExchange(_ newService: any ExchangeDataService) {
+        let typeName = String(describing: type(of: newService))
+        logger.info("ChartViewModel.switchExchange newService=\(typeName)")
+        stop()
+        service = newService
+        start()
     }
 
     /// Switch to a different interval: stop current stream, reload historical, re-subscribe.

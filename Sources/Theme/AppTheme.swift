@@ -81,6 +81,14 @@ enum AppTheme {
     /// Blue accent for highlights and labels on the STRC tab.
     static let strcAccent         = Color(red: 0.2,  green: 0.6,   blue: 1.0)
 
+    // MARK: - Alerts
+
+    /// Horizontal alert threshold line on the chart canvas.
+    static let alertLine   = Color.yellow
+
+    /// Alert firing banner background (orange — distinct from yellow line).
+    static let alertBanner = Color(red: 1.0, green: 0.6, blue: 0.0)
+
     // MARK: - Heatmap
 
     /// Near-black dark blue — lowest liquidity (cold end of thermal palette).
