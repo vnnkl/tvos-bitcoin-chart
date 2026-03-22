@@ -6,6 +6,23 @@ A real-time Bitcoin trading terminal for tvOS. Live candlestick charts, order bo
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
+## Screenshots
+
+### Chart
+Live candlestick chart with order book depth ladder, depth chart, and real-time trade feed.
+
+![Chart Tab](docs/screenshots/chart-tab.png)
+
+### STRC Dashboard
+STRC ticker with ATM status, yield metrics, BTC accumulation summary, and SEC 8-K filings.
+
+![STRC Tab](docs/screenshots/strc-tab.png)
+
+### Settings
+Switch between live and demo data, configure default timeframe, and manage price alerts.
+
+![Settings Tab](docs/screenshots/settings-tab.png)
+
 ## Features
 
 **Chart Tab**
