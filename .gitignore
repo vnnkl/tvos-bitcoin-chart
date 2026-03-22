@@ -17,6 +17,7 @@ Package.resolved
 
 # ── GSD baseline (auto-generated) ──
 .gsd
+.bg-shell/
 Thumbs.db
 *.swp
 *.swo
