@@ -28,6 +28,12 @@ enum AppTheme {
     /// Doji / unchanged candle: neutral gray.
     static let candleDoji = Color(white: 0.5)
 
+    static let indicatorEMA    = Color(red: 0.96, green: 0.77, blue: 0.16)
+    static let indicatorSMA    = Color(red: 0.54, green: 0.74, blue: 0.98)
+    static let indicatorRSI    = Color(red: 0.98, green: 0.56, blue: 0.22)
+    static let indicatorMACD   = Color(red: 0.35, green: 0.82, blue: 0.67)
+    static let indicatorSignal = Color(red: 0.98, green: 0.84, blue: 0.35)
+
     // MARK: - Text Colors
 
     static let textPrimary   = Color.white

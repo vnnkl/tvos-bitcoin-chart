@@ -59,16 +59,11 @@ struct CandlestickChartView: View {
     }
 }
 
-// MARK: - Private helpers
-
-private extension CandlestickChartView {
-
-    /// Maps a price value to a Y coordinate in the canvas.
-    /// `min` and `range` come from `priceExtents` (already padded).
-    func priceY(_ price: Decimal, in height: CGFloat, min: CGFloat, range: CGFloat) -> CGFloat {
-        let p = CGFloat(NSDecimalNumber(decimal: price).doubleValue)
-        return height - ((p - min) / range) * height
-    }
+/// Maps a price value to a Y coordinate in the canvas.
+/// `min` and `range` come from `priceExtents` (already padded).
+func priceY(_ price: Decimal, in height: CGFloat, min: CGFloat, range: CGFloat) -> CGFloat {
+    let p = CGFloat(NSDecimalNumber(decimal: price).doubleValue)
+    return height - ((p - min) / range) * height
 }
 
 /// Finds the minimum low and price range across all klines, with 5 % padding.

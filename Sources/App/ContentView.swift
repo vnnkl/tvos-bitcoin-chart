@@ -26,6 +26,7 @@ struct ContentView: View {
     @State var viewModel     = ChartViewModel(service: BinanceService())
     @State var strcViewModel = STRCViewModel()
     @State var appSettings   = AppSettings()
+    @State var indicatorSettings = IndicatorSettings()
     @State var alertStore    = AlertStore()
     @State private var defaultsApplied = false
 
@@ -38,13 +39,18 @@ struct ContentView: View {
             // ── Main tab navigation ──────────────────────────────────────
             if appSettings.hasSeenDisclaimer {
                 TabView {
-                    ChartContainerView(viewModel: viewModel, alertStore: alertStore)
+                    ChartContainerView(viewModel: viewModel, indicatorSettings: indicatorSettings, alertStore: alertStore)
                         .tabItem { Label("Chart", systemImage: "chart.bar") }
 
                     STRCDashboardView(viewModel: strcViewModel)
                         .tabItem { Label("STRC", systemImage: "building.columns") }
 
-                    SettingsView(viewModel: viewModel, appSettings: appSettings, alertStore: alertStore)
+                    SettingsView(
+                        viewModel: viewModel,
+                        appSettings: appSettings,
+                        alertStore: alertStore,
+                        indicatorSettings: indicatorSettings
+                    )
                         .tabItem { Label("Settings", systemImage: "gearshape") }
                 }
             }

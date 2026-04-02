@@ -25,6 +25,7 @@ struct SettingsView: View {
     @Bindable var viewModel: ChartViewModel
     var appSettings: AppSettings
     var alertStore: AlertStore
+    @Bindable var indicatorSettings: IndicatorSettings
 
     // MARK: - Local state
 
@@ -51,7 +52,9 @@ struct SettingsView: View {
                 timeframeSection
                     .focusSection()
 
-                // ── Section 3: Price Alerts ───────────────────────────────
+                indicatorSection
+                    .focusSection()
+
                 alertsSection
                     .focusSection()
             }
@@ -174,6 +177,93 @@ struct SettingsView: View {
     }
 
     // MARK: - Alerts Section
+
+    private var indicatorSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            sectionHeader("Indicators", icon: "waveform.path.ecg")
+
+            Text("EMA 21 is enabled by default. Turn on additional overlays only when you want more chart context.")
+                .font(AppTheme.dataFont)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            VStack(spacing: 12) {
+                indicatorRow(
+                    title: "EMA 21",
+                    subtitle: "Fast trend overlay on price",
+                    color: AppTheme.indicatorEMA,
+                    isEnabled: indicatorSettings.showEMA21,
+                    action: { indicatorSettings.showEMA21.toggle() }
+                )
+                indicatorRow(
+                    title: "SMA 50",
+                    subtitle: "Slower guide overlay on price",
+                    color: AppTheme.indicatorSMA,
+                    isEnabled: indicatorSettings.showSMA50,
+                    action: { indicatorSettings.showSMA50.toggle() }
+                )
+                indicatorRow(
+                    title: "RSI 14",
+                    subtitle: "Momentum strip below volume",
+                    color: AppTheme.indicatorRSI,
+                    isEnabled: indicatorSettings.showRSI14,
+                    action: { indicatorSettings.showRSI14.toggle() }
+                )
+                indicatorRow(
+                    title: "MACD",
+                    subtitle: "Histogram and signal panel",
+                    color: AppTheme.indicatorMACD,
+                    isEnabled: indicatorSettings.showMACD,
+                    action: { indicatorSettings.showMACD.toggle() }
+                )
+            }
+            .padding(20)
+            .background(AppTheme.strcCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
+        }
+    }
+
+    @ViewBuilder
+    private func indicatorRow(
+        title: String,
+        subtitle: String,
+        color: Color,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                Image(systemName: isEnabled ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(isEnabled ? color : AppTheme.textSecondary)
+                    .frame(width: 32)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(AppTheme.bodyFont)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .fontWeight(isEnabled ? .semibold : .regular)
+
+                    Text(subtitle)
+                        .font(AppTheme.dataFont)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+
+                Spacer()
+
+                Text(isEnabled ? "On" : "Off")
+                    .font(AppTheme.dataFont)
+                    .foregroundStyle(isEnabled ? color : AppTheme.textSecondary)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.badgeCornerRadius)
+                    .fill(isEnabled ? color.opacity(0.16) : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
+        .focusEffectDisabled()
+    }
 
     private var alertsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -358,10 +448,11 @@ private extension Decimal {
 
 #Preview {
     @Previewable @State var settings = AppSettings()
+    @Previewable @State var indicatorSettings = IndicatorSettings()
     @Previewable @State var alerts   = AlertStore()
     @Previewable @State var vm       = ChartViewModel(service: StubExchangeService())
 
-    SettingsView(viewModel: vm, appSettings: settings, alertStore: alerts)
+    SettingsView(viewModel: vm, appSettings: settings, alertStore: alerts, indicatorSettings: indicatorSettings)
         .frame(width: 1920, height: 1080)
         .background(AppTheme.background)
 }

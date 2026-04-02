@@ -21,6 +21,7 @@ import SwiftUI
 struct ChartContainerView: View {
 
     @Bindable var viewModel: ChartViewModel
+    var indicatorSettings: IndicatorSettings
     var alertStore: AlertStore?
 
     @FocusState private var chartFocused: Bool
@@ -83,6 +84,8 @@ struct ChartContainerView: View {
                                 maxHeight: geometry.size.height * AppTheme.volumeHeightRatio
                             )
                             .padding(.top, 4)
+
+                        indicatorPanels
                     }
 
                     // Vertical separator
@@ -343,6 +346,13 @@ struct ChartContainerView: View {
                         LineChartView(klines: klines)
                     }
 
+                    IndicatorOverlayView(
+                        klines: klines,
+                        indicatorSettings: indicatorSettings,
+                        priceMin: pMin,
+                        priceRange: pRange
+                    )
+
                     AlertOverlayView(
                         alerts: alertStore?.alerts.filter { $0.isEnabled } ?? [],
                         priceMin: pMin,
@@ -377,6 +387,26 @@ struct ChartContainerView: View {
             // Time X-axis bar below chart + price axis
             TimeAxisView(klines: klines, currentInterval: viewModel.currentInterval)
                 .frame(height: AppTheme.timeAxisHeight)
+        }
+    }
+
+    @ViewBuilder
+    private var indicatorPanels: some View {
+        let klines = viewModel.visibleKlines
+
+        if indicatorSettings.showRSI14 || indicatorSettings.showMACD {
+            VStack(spacing: 6) {
+                if indicatorSettings.showRSI14 {
+                    RSIGaugeView(klines: klines)
+                        .frame(height: 76)
+                }
+
+                if indicatorSettings.showMACD {
+                    MACDPanelView(klines: klines)
+                        .frame(height: 110)
+                }
+            }
+            .padding(.top, 6)
         }
     }
 
@@ -419,6 +449,8 @@ struct ChartContainerView: View {
 }
 
 #Preview {
-    ChartContainerView(viewModel: ChartViewModel())
+    @Previewable @State var indicatorSettings = IndicatorSettings()
+
+    ChartContainerView(viewModel: ChartViewModel(), indicatorSettings: indicatorSettings)
         .frame(width: 1920, height: 1080)
 }
