@@ -24,7 +24,7 @@ struct ChartContainerView: View {
     var indicatorSettings: IndicatorSettings
     var alertStore: AlertStore?
 
-    @FocusState private var chartFocused: Bool
+    @Namespace private var headerFocusScope
     @FocusState private var focusedMode: ChartMode?
 
     var body: some View {
@@ -33,6 +33,8 @@ struct ChartContainerView: View {
 
                 // ── Header bar ─────────────────────────────────────
                 headerBar
+                    .focusScope(headerFocusScope)
+                    .focusSection()
                     .padding(.bottom, 2)
 
                 // Thin separator below header
@@ -47,34 +49,7 @@ struct ChartContainerView: View {
                     VStack(spacing: 0) {
                         chartArea
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(
-                                        chartFocused
-                                            ? AppTheme.textSecondary.opacity(0.4)
-                                            : Color.clear,
-                                        lineWidth: 1
-                                    )
-                            )
-                            .focusable()
-                            .focused($chartFocused)
-                            .focusSection()
-                            .onPlayPauseCommand {
-                                if viewModel.isExploring {
-                                    viewModel.exitExploration()
-                                } else {
-                                    viewModel.enterExploration()
-                                }
-                            }
-                            .onMoveCommand { direction in
-                                if viewModel.isExploring {
-                                    viewModel.moveCrosshair(direction)
-                                } else if direction == .left || direction == .right {
-                                    viewModel.enterExploration()
-                                    viewModel.moveCrosshair(direction)
-                                }
-                            }
-                            .onExitCommand {
+                            .onAppear {
                                 viewModel.exitExploration()
                             }
 
@@ -107,33 +82,37 @@ struct ChartContainerView: View {
         }
         .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
         .background(AppTheme.background.ignoresSafeArea())
-        // ── Alert banner ──
         .overlay(alignment: .top) {
-            if let alert = viewModel.triggeredAlert {
-                AlertBannerView(alert: alert)
+            VStack(spacing: 10) {
+                if let alert = viewModel.triggeredAlert {
+                    AlertBannerView(alert: alert)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                if let transition = viewModel.regimeTransition {
+                    MarketRegimeBannerView(regime: transition.regime)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                if viewModel.connectionHealth == .reconnecting {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                            .tint(.white)
+                        Text("Reconnecting to Binance…")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(.white)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .background(AppTheme.stateReconnecting.opacity(0.9))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.badgeCornerRadius))
                     .transition(.move(edge: .top).combined(with: .opacity))
-                    .padding(.top, AppTheme.edgePadding)
+                }
             }
+            .padding(.top, AppTheme.edgePadding)
         }
         .animation(.easeInOut(duration: 0.3), value: viewModel.triggeredAlert?.id)
-        // ── Reconnection banner ──
-        .overlay(alignment: .top) {
-            if viewModel.connectionHealth == .reconnecting {
-                HStack(spacing: 12) {
-                    ProgressView()
-                        .tint(.white)
-                    Text("Reconnecting to Binance…")
-                        .font(.system(size: 22, weight: .medium))
-                        .foregroundStyle(.white)
-                }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 10)
-                .background(AppTheme.stateReconnecting.opacity(0.9))
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.badgeCornerRadius))
-                .transition(.move(edge: .top).combined(with: .opacity))
-                .padding(.top, AppTheme.edgePadding + 56)
-            }
-        }
+        .animation(.easeInOut(duration: 0.3), value: viewModel.regimeTransition?.id)
         .animation(.easeInOut(duration: 0.3), value: viewModel.connectionHealth)
     }
 
@@ -141,65 +120,68 @@ struct ChartContainerView: View {
 
     @ViewBuilder
     private var headerBar: some View {
-        HStack(spacing: 0) {
-            // ── Left: symbol + price + change ──
-            HStack(alignment: .firstTextBaseline, spacing: 16) {
-                Text("BTC/USDT")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(AppTheme.textSecondary)
+        VStack(spacing: 10) {
+            HStack(spacing: 0) {
+                HStack(alignment: .firstTextBaseline, spacing: 16) {
+                    Text("BTC/USDT")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(AppTheme.textSecondary)
 
-                Text(formattedPrice)
-                    .font(.system(size: 44, weight: .heavy, design: .monospaced))
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .contentTransition(.numericText())
+                    Text(formattedPrice)
+                        .font(.system(size: 44, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .contentTransition(.numericText())
 
-                Text(formattedChange)
-                    .font(.system(size: 28, weight: .bold, design: .monospaced))
-                    .foregroundStyle(changeColor)
-                    .contentTransition(.numericText())
-            }
-
-            Spacer(minLength: 24)
-
-            // ── Center: timeframe selector ──
-            TimeframeSelectorView(
-                activeInterval: $viewModel.currentInterval,
-                onSelect: { viewModel.switchInterval($0) }
-            )
-            .frame(maxWidth: 720)
-
-            Spacer(minLength: 24)
-
-            // ── Right: zoom buttons + mode toggle + status ──
-            HStack(spacing: 16) {
-                // Zoom out / zoom in
-                HStack(spacing: 8) {
-                    Button { viewModel.zoomOut() } label: {
-                        Image(systemName: "minus.magnifyingglass")
-                            .font(.system(size: 24, weight: .medium))
-                            .foregroundStyle(AppTheme.textPrimary)
-                            .frame(minWidth: 52, minHeight: 52)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.12)))
-                    }
-                    .buttonStyle(.plain)
-                    .focusEffectDisabled()
-                    .disabled(viewModel.zoomLevel <= -3)
-
-                    Button { viewModel.zoomIn() } label: {
-                        Image(systemName: "plus.magnifyingglass")
-                            .font(.system(size: 24, weight: .medium))
-                            .foregroundStyle(AppTheme.textPrimary)
-                            .frame(minWidth: 52, minHeight: 52)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.12)))
-                    }
-                    .buttonStyle(.plain)
-                    .focusEffectDisabled()
-                    .disabled(viewModel.zoomLevel >= 5)
+                    Text(formattedChange)
+                        .font(.system(size: 28, weight: .bold, design: .monospaced))
+                        .foregroundStyle(changeColor)
+                        .contentTransition(.numericText())
                 }
 
-                chartModeToggle
-                ConnectionStatusView(state: viewModel.connectionHealth)
+                Spacer(minLength: 24)
+
+                TimeframeSelectorView(
+                    activeInterval: $viewModel.currentInterval,
+                    onSelect: { viewModel.switchInterval($0) },
+                    focusScope: headerFocusScope
+                )
+                .frame(maxWidth: 720)
+                .prefersDefaultFocus(true, in: headerFocusScope)
+
+                Spacer(minLength: 24)
+
+                HStack(spacing: 16) {
+                    HStack(spacing: 8) {
+                        Button { viewModel.zoomOut() } label: {
+                            Image(systemName: "minus.magnifyingglass")
+                                .font(.system(size: 24, weight: .medium))
+                                .foregroundStyle(AppTheme.textPrimary)
+                                .frame(minWidth: 52, minHeight: 52)
+                                .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.12)))
+                        }
+                        .buttonStyle(.plain)
+                        .focusEffectDisabled()
+                        .disabled(viewModel.zoomLevel <= -3)
+
+                        Button { viewModel.zoomIn() } label: {
+                            Image(systemName: "plus.magnifyingglass")
+                                .font(.system(size: 24, weight: .medium))
+                                .foregroundStyle(AppTheme.textPrimary)
+                                .frame(minWidth: 52, minHeight: 52)
+                                .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.12)))
+                        }
+                        .buttonStyle(.plain)
+                        .focusEffectDisabled()
+                        .disabled(viewModel.zoomLevel >= 5)
+                    }
+
+                    chartModeToggle
+                    ConnectionStatusView(state: viewModel.connectionHealth)
+                }
+                .focusSection()
             }
+
+            MarketRegimeStripView(regime: viewModel.marketRegime)
         }
     }
 

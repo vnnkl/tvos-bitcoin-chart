@@ -115,6 +115,8 @@ final class ChartViewModel {
     /// The most recently fired alert — drives `AlertBannerView`. `nil` when no banner is showing.
     /// Auto-cleared after 3 seconds by a `Task.sleep` spawned on each fire.
     var triggeredAlert: PriceAlert? = nil
+    var marketRegime: MarketRegimeState = .warmingUp
+    var regimeTransition: MarketRegimeTransition? = nil
 
     // MARK: - Private
 
@@ -123,6 +125,7 @@ final class ChartViewModel {
     private var depthStreamTask: Task<Void, Never>?
     private var tradesStreamTask: Task<Void, Never>?
     private var stateObserverTask: Task<Void, Never>?
+    private var regimeTransitionTask: Task<Void, Never>?
 
     // MARK: - Init
 
@@ -150,6 +153,9 @@ final class ChartViewModel {
         depthStreamTask = nil
         tradesStreamTask?.cancel()
         tradesStreamTask = nil
+        regimeTransitionTask?.cancel()
+        regimeTransitionTask = nil
+        regimeTransition = nil
         service.disconnect()
         connectionState = .disconnected
     }
@@ -182,6 +188,8 @@ final class ChartViewModel {
             klineStore.loadHistorical([])
             orderBookStore.clear()
             tradeStore.clear()
+            marketRegime = .warmingUp
+            regimeTransition = nil
             await loadAndStream(symbol: currentSymbol, interval: interval)
         }
     }
@@ -229,6 +237,7 @@ final class ChartViewModel {
         do {
             let historical = try await service.fetchKlines(symbol: symbol, interval: interval, limit: 500)
             klineStore.loadHistorical(historical)
+            updateMarketRegime(announceTransition: false)
             logger.info("Loaded \(historical.count) historical klines")
         } catch {
             logger.error("REST fetch failed: \(error.localizedDescription)")
@@ -252,6 +261,7 @@ final class ChartViewModel {
                 for try await snapshot in depthStream {
                     guard !Task.isCancelled else { break }
                     orderBookStore.append(snapshot)
+                    updateMarketRegime(announceTransition: false)
                 }
             } catch {
                 logger.error("Depth stream error: \(error.localizedDescription)")
@@ -268,6 +278,7 @@ final class ChartViewModel {
                 for try await trade in tradesStream {
                     guard !Task.isCancelled else { break }
                     tradeStore.append(trade)
+                    updateMarketRegime(announceTransition: false)
                 }
             } catch {
                 logger.error("Trades stream error: \(error.localizedDescription)")
@@ -283,7 +294,6 @@ final class ChartViewModel {
                 // Capture price BEFORE applying the live update for crossing detection.
                 let prevPrice = klineStore.currentPrice
                 klineStore.applyLive(kline)
-                let newCount = klineStore.klines.count
                 // Stability: when exploring, if the visible array didn't grow (a trim happened),
                 // the crosshairIndex points to a different candle — decrement to compensate.
                 // We check visibleKlines.count because crosshairIndex indexes into visibleKlines.
@@ -291,6 +301,7 @@ final class ChartViewModel {
                     crosshairIndex = idx - 1
                 }
                 connectionState = service.connectionState
+                updateMarketRegime(announceTransition: true)
 
                 // Alert crossing detection: check every enabled, un-triggered alert.
                 if let store = alertStore {
@@ -321,5 +332,32 @@ final class ChartViewModel {
         // Stream ended (disconnected or cancelled)
         connectionState = service.connectionState
         logger.info("Live stream ended for \(symbol)@\(interval)")
+    }
+
+    private func updateMarketRegime(announceTransition: Bool) {
+        let nextRegime = marketRegimeState(
+            klines: klineStore.klines,
+            trades: tradeStore.trades,
+            snapshot: orderBookStore.snapshots.last
+        )
+
+        guard nextRegime != marketRegime else { return }
+
+        let previousRegime = marketRegime
+        marketRegime = nextRegime
+
+        guard announceTransition, shouldAnnounceRegimeTransition(previous: previousRegime, next: nextRegime) else {
+            return
+        }
+
+        regimeTransitionTask?.cancel()
+        regimeTransition = MarketRegimeTransition(regime: nextRegime)
+
+        let transitionID = regimeTransition?.id
+        regimeTransitionTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard let self, regimeTransition?.id == transitionID else { return }
+            regimeTransition = nil
+        }
     }
 }
