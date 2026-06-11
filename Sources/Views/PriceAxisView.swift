@@ -23,6 +23,10 @@ struct PriceAxisView: View {
     /// Padded price range — must match `priceExtents()` output.
     let priceRange: CGFloat
 
+    private var scale: PriceScale {
+        PriceScale(priceMin: priceMin, priceRange: priceRange)
+    }
+
     var body: some View {
         GeometryReader { geo in
             let size = geo.size
@@ -33,7 +37,7 @@ struct PriceAxisView: View {
                 Canvas { ctx, canvasSize in
                     let tickColor = GraphicsContext.Shading.color(AppTheme.axisLabelColor)
                     for price in ticks {
-                        let y = priceYCoord(price, in: canvasSize.height)
+                        let y = scale.y(price, in: canvasSize.height)
                         var path = Path()
                         path.move(to: CGPoint(x: 0, y: y))
                         path.addLine(to: CGPoint(x: 6, y: y))
@@ -44,7 +48,7 @@ struct PriceAxisView: View {
 
                 // SwiftUI Text labels — Canvas cannot render rich text.
                 ForEach(ticks, id: \.self) { price in
-                    let y = priceYCoord(price, in: size.height)
+                    let y = scale.y(price, in: size.height)
                     Text(Self.formatPrice(price))
                         .font(AppTheme.axisFont)
                         .foregroundStyle(AppTheme.axisLabelColor)
@@ -91,14 +95,6 @@ struct PriceAxisView: View {
             price += interval
         }
         return ticks
-    }
-
-    // MARK: - Geometry helper
-
-    /// Maps a price value to a Y coordinate using the same formula as all chart views.
-    private func priceYCoord(_ price: CGFloat, in height: CGFloat) -> CGFloat {
-        guard priceRange > 0 else { return height / 2 }
-        return height - ((price - priceMin) / priceRange) * height
     }
 
     // MARK: - Formatting

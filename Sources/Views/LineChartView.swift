@@ -14,12 +14,12 @@ struct LineChartView: View {
             guard klines.count >= 2 else { return }
 
             let layout = CandleLayout(count: klines.count, width: size.width)
-            let (minPrice, priceRange) = priceExtents(klines)
+            let scale = PriceScale(klines: klines)
 
             // Build close-price points
             let points: [CGPoint] = klines.enumerated().map { index, kline in
                 let x = layout.centerX(for: index)
-                let y = priceY(kline.close, in: size.height, min: minPrice, range: priceRange)
+                let y = scale.y(kline.close, in: size.height)
                 return CGPoint(x: x, y: y)
             }
 
@@ -47,27 +47,5 @@ struct LineChartView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .drawingGroup()
-    }
-}
-
-// MARK: - Private helpers
-
-private extension LineChartView {
-
-    func priceExtents(_ klines: [Kline]) -> (min: CGFloat, range: CGFloat) {
-        let closes = klines.map { NSDecimalNumber(decimal: $0.close).doubleValue }
-        let lows   = klines.map { NSDecimalNumber(decimal: $0.low).doubleValue }
-        let highs  = klines.map { NSDecimalNumber(decimal: $0.high).doubleValue }
-        let rawMin = min(closes.min() ?? 0, lows.min()  ?? 0)
-        let rawMax = max(closes.max() ?? 1, highs.max() ?? 1)
-        let pad    = (rawMax - rawMin) * 0.05
-        let lo     = rawMin - pad
-        let hi     = rawMax + pad
-        return (CGFloat(lo), CGFloat(max(hi - lo, 1)))
-    }
-
-    func priceY(_ price: Decimal, in height: CGFloat, min: CGFloat, range: CGFloat) -> CGFloat {
-        let p = CGFloat(NSDecimalNumber(decimal: price).doubleValue)
-        return height - ((p - min) / range) * height
     }
 }

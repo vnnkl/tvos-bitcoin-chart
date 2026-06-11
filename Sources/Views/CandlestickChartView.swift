@@ -3,8 +3,8 @@ import SwiftUI
 /// Renders OHLC candlesticks on a SwiftUI `Canvas`.
 ///
 /// **Coordinate system:** Canvas origin is top-left; price axis runs bottom-to-top,
-/// so high prices map to low Y values. The helper `priceY(_:in:min:range:)` performs
-/// the inversion plus 5 % vertical padding to keep candles away from edges.
+/// so high prices map to low Y values. `PriceScale` performs the inversion plus
+/// 5 % vertical padding to keep candles away from edges.
 ///
 /// **Sizing:** Candle width and inter-candle spacing are computed from `klines.count`
 /// and the available canvas width, respecting `AppTheme.candleMinWidth`.
@@ -17,17 +17,17 @@ struct CandlestickChartView: View {
             guard !klines.isEmpty else { return }
 
             let layout = CandleLayout(count: klines.count, width: size.width)
-            let (minPrice, priceRange) = priceExtents(klines)
+            let scale = PriceScale(klines: klines)
 
             for (index, kline) in klines.enumerated() {
                 let centerX = layout.centerX(for: index)
                 let bodyLeft = centerX - layout.bodyWidth / 2
 
                 // --- Y coordinates (inverted: high price → low Y) ---
-                let openY  = priceY(kline.open,  in: size.height, min: minPrice, range: priceRange)
-                let closeY = priceY(kline.close, in: size.height, min: minPrice, range: priceRange)
-                let highY  = priceY(kline.high,  in: size.height, min: minPrice, range: priceRange)
-                let lowY   = priceY(kline.low,   in: size.height, min: minPrice, range: priceRange)
+                let openY  = scale.y(kline.open,  in: size.height)
+                let closeY = scale.y(kline.close, in: size.height)
+                let highY  = scale.y(kline.high,  in: size.height)
+                let lowY   = scale.y(kline.low,   in: size.height)
 
                 let color: Color
                 if kline.close >= kline.open {
@@ -57,29 +57,6 @@ struct CandlestickChartView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .drawingGroup()
     }
-}
-
-/// Maps a price value to a Y coordinate in the canvas.
-/// `min` and `range` come from `priceExtents` (already padded).
-func priceY(_ price: Decimal, in height: CGFloat, min: CGFloat, range: CGFloat) -> CGFloat {
-    let p = CGFloat(NSDecimalNumber(decimal: price).doubleValue)
-    return height - ((p - min) / range) * height
-}
-
-/// Finds the minimum low and price range across all klines, with 5 % padding.
-///
-/// This is a free function rather than a method so both `CandlestickChartView` and
-/// `ChartContainerView` can call it to derive the same padded price extents,
-/// ensuring the heatmap and candlestick Y-axes are identical.
-func priceExtents(_ klines: [Kline]) -> (min: CGFloat, range: CGFloat) {
-    let lows   = klines.map { NSDecimalNumber(decimal: $0.low).doubleValue }
-    let highs  = klines.map { NSDecimalNumber(decimal: $0.high).doubleValue }
-    let rawMin = lows.min()  ?? 0
-    let rawMax = highs.max() ?? 1
-    let pad    = (rawMax - rawMin) * 0.05
-    let lo     = rawMin - pad
-    let hi     = rawMax + pad
-    return (CGFloat(lo), CGFloat(max(hi - lo, 1)))
 }
 
 // MARK: - Layout helper
