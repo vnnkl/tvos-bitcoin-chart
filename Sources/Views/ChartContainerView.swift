@@ -178,7 +178,6 @@ struct ChartContainerView: View {
                     chartModeToggle
                     ConnectionStatusView(state: viewModel.connectionHealth)
                 }
-                .focusSection()
             }
 
             MarketRegimeStripView(regime: viewModel.marketRegime)
