@@ -70,109 +70,59 @@ final class BinanceService: ExchangeDataService, @unchecked Sendable {
         return klines
     }
 
-    // MARK: - WebSocket: Klines
+    // MARK: - WebSocket subscriptions
 
     /// Streams live kline updates for `symbol` at `interval`.
+    ///
+    /// Connects to `wss://stream.binance.com:9443/ws/<symbol>@kline_<interval>`.
     func subscribeKlines(symbol: String, interval: String) -> AsyncThrowingStream<Kline, Error> {
-        let path = "\(symbol.lowercased())@kline_\(interval)"
-        guard let url = URL(string: "\(wsBaseURL)\(path)") else {
-            return AsyncThrowingStream { $0.finish(throwing: URLError(.badURL)) }
-        }
-
-        logger.info("Subscribing to kline stream: \(url.absoluteString)")
-        let messageStream = webSocketManager.connect(to: url)
-
-        return AsyncThrowingStream { continuation in
-            let task = Task {
-                do {
-                    for try await message in messageStream {
-                        guard case .string(let text) = message else { continue }
-                        guard let data = text.data(using: .utf8) else { continue }
-                        let event = try JSONDecoder().decode(BinanceKlineEvent.self, from: data)
-                        continuation.yield(event.kline)
-                    }
-                    continuation.finish()
-                } catch {
-                    logger.error("kline stream error: \(error.localizedDescription)")
-                    continuation.finish(throwing: error)
-                }
-            }
-            continuation.onTermination = { _ in task.cancel() }
-        }
+        subscribe(
+            path: "\(symbol.lowercased())@kline_\(interval)",
+            label: "kline",
+            manager: webSocketManager
+        ) { (event: BinanceKlineEvent) in event.kline }
     }
-
-    // MARK: - WebSocket: Order Book Depth
 
     /// Streams live partial order-book depth snapshots for `symbol`.
     ///
     /// Connects to `wss://stream.binance.com:9443/ws/<symbol>@depth20@100ms`.
     /// Each message is a self-contained top-20 bid/ask snapshot — no reconciliation needed.
-    ///
-    /// - Observability: connect/disconnect/errors logged under subsystem
-    ///   `"com.bitcointerminal.websocket"` category `"BinanceService"`.
-    ///   Inspect with: `log stream --predicate 'subsystem == "com.bitcointerminal.websocket"'`
     func subscribeOrderBook(symbol: String) -> AsyncThrowingStream<OrderBookSnapshot, Error> {
-        let path = "\(symbol.lowercased())@depth20@100ms"
-        guard let url = URL(string: "\(wsBaseURL)\(path)") else {
-            return AsyncThrowingStream { $0.finish(throwing: URLError(.badURL)) }
-        }
-
-        logger.info("Subscribing to depth stream: \(url.absoluteString)")
-        let messageStream = depthWebSocketManager.connect(to: url)
-
-        return AsyncThrowingStream { continuation in
-            let task = Task {
-                do {
-                    for try await message in messageStream {
-                        guard case .string(let text) = message else { continue }
-                        guard let data = text.data(using: .utf8) else { continue }
-                        let snapshot = try JSONDecoder().decode(OrderBookSnapshot.self, from: data)
-                        continuation.yield(snapshot)
-                    }
-                    continuation.finish()
-                } catch {
-                    logger.error("depth stream error: \(error.localizedDescription)")
-                    continuation.finish(throwing: error)
-                }
-            }
-            continuation.onTermination = { _ in task.cancel() }
-        }
+        subscribe(
+            path: "\(symbol.lowercased())@depth20@100ms",
+            label: "depth",
+            manager: depthWebSocketManager
+        ) { (snapshot: OrderBookSnapshot) in snapshot }
     }
-
-    // MARK: - WebSocket: Aggregate Trades
 
     /// Streams live aggregate trades for `symbol`.
     ///
     /// Connects to `wss://stream.binance.com:9443/ws/<symbol>@aggTrade`.
+    func subscribeTrades(symbol: String) -> AsyncThrowingStream<AggTrade, Error> {
+        subscribe(
+            path: "\(symbol.lowercased())@aggTrade",
+            label: "aggTrade",
+            manager: tradesWebSocketManager
+        ) { (trade: AggTrade) in trade }
+    }
+
+    /// Connects `manager` to the stream at `path` and runs the messages
+    /// through the decoded-stream pipeline.
     ///
     /// - Observability: connect/disconnect/errors logged under subsystem
     ///   `"com.bitcointerminal.websocket"` category `"BinanceService"`.
-    func subscribeTrades(symbol: String) -> AsyncThrowingStream<AggTrade, Error> {
-        let path = "\(symbol.lowercased())@aggTrade"
+    ///   Inspect with: `log stream --predicate 'subsystem == "com.bitcointerminal.websocket"'`
+    private func subscribe<Event: Decodable & Sendable, Output: Sendable>(
+        path: String,
+        label: String,
+        manager: WebSocketManager,
+        transform: @escaping @Sendable (Event) -> Output
+    ) -> AsyncThrowingStream<Output, Error> {
         guard let url = URL(string: "\(wsBaseURL)\(path)") else {
             return AsyncThrowingStream { $0.finish(throwing: URLError(.badURL)) }
         }
-
-        logger.info("Subscribing to aggTrade stream: \(url.absoluteString)")
-        let messageStream = tradesWebSocketManager.connect(to: url)
-
-        return AsyncThrowingStream { continuation in
-            let task = Task {
-                do {
-                    for try await message in messageStream {
-                        guard case .string(let text) = message else { continue }
-                        guard let data = text.data(using: .utf8) else { continue }
-                        let trade = try JSONDecoder().decode(AggTrade.self, from: data)
-                        continuation.yield(trade)
-                    }
-                    continuation.finish()
-                } catch {
-                    logger.error("aggTrade stream error: \(error.localizedDescription)")
-                    continuation.finish(throwing: error)
-                }
-            }
-            continuation.onTermination = { _ in task.cancel() }
-        }
+        logger.info("Subscribing to \(label) stream: \(url.absoluteString)")
+        return decodeBinanceEvents(from: manager.connect(to: url), label: label, transform: transform)
     }
 
     // MARK: - Lifecycle
@@ -183,5 +133,39 @@ final class BinanceService: ExchangeDataService, @unchecked Sendable {
         webSocketManager.disconnect()
         depthWebSocketManager.disconnect()
         tradesWebSocketManager.disconnect()
+    }
+}
+
+// MARK: - Decoded-stream pipeline
+
+/// Shared plumbing for every Binance WebSocket subscription: decodes each text
+/// frame of `messages` as `Event`, applies `transform`, and yields the result.
+///
+/// Semantics (identical to the per-stream loops this replaced):
+/// - Non-text frames are skipped.
+/// - A frame that fails to decode finishes the stream with that error.
+/// - Source termination — normal or throwing — propagates to the consumer.
+/// - Cancelling the consumer cancels the decode task.
+func decodeBinanceEvents<Event: Decodable & Sendable, Output: Sendable>(
+    from messages: AsyncThrowingStream<URLSessionWebSocketTask.Message, Error>,
+    label: String,
+    transform: @escaping @Sendable (Event) -> Output
+) -> AsyncThrowingStream<Output, Error> {
+    AsyncThrowingStream { continuation in
+        let task = Task {
+            do {
+                for try await message in messages {
+                    guard case .string(let text) = message else { continue }
+                    guard let data = text.data(using: .utf8) else { continue }
+                    let event = try JSONDecoder().decode(Event.self, from: data)
+                    continuation.yield(transform(event))
+                }
+                continuation.finish()
+            } catch {
+                logger.error("\(label) stream error: \(error.localizedDescription)")
+                continuation.finish(throwing: error)
+            }
+        }
+        continuation.onTermination = { _ in task.cancel() }
     }
 }
