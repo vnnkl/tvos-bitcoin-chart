@@ -101,36 +101,9 @@ private struct OHLCVTooltip: View {
 
     let kline: Kline
 
-    private static let priceFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 2
-        f.maximumFractionDigits = 2
-        f.usesGroupingSeparator = true
-        return f
-    }()
-
-    private static let volFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 4
-        f.maximumFractionDigits = 4
-        f.usesGroupingSeparator = true
-        return f
-    }()
-
-    private static let dateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateStyle = .none
-        f.timeStyle = .short
-        return f
-    }()
-
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(Self.dateFormatter.string(from: kline.openTime))
+            Text(AppFormatters.tooltipTime.string(from: kline.openTime))
                 .font(AppTheme.bodyFont)
                 .foregroundStyle(AppTheme.textSecondary)
 
@@ -173,10 +146,10 @@ private struct OHLCVTooltip: View {
     }
 
     private func format(_ price: Decimal) -> String {
-        Self.priceFormatter.string(from: price as NSDecimalNumber) ?? "\(price)"
+        AppFormatters.price.string(from: price as NSDecimalNumber) ?? "\(price)"
     }
 
     private func formatVol(_ vol: Decimal) -> String {
-        Self.volFormatter.string(from: vol as NSDecimalNumber) ?? "\(vol)"
+        AppFormatters.volume.string(from: vol as NSDecimalNumber) ?? "\(vol)"
     }
 }

@@ -394,35 +394,15 @@ struct ChartContainerView: View {
 
     // MARK: - Formatting
 
-    private static let priceFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 2
-        f.maximumFractionDigits = 2
-        f.groupingSeparator = ","
-        f.usesGroupingSeparator = true
-        return f
-    }()
-
-    private static let changeFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 2
-        f.maximumFractionDigits = 2
-        return f
-    }()
-
     private var formattedPrice: String {
-        Self.priceFormatter.string(from: viewModel.klineStore.currentPrice as NSDecimalNumber)
+        AppFormatters.price.string(from: viewModel.klineStore.currentPrice as NSDecimalNumber)
             ?? "\(viewModel.klineStore.currentPrice)"
     }
 
     private var formattedChange: String {
         let change = viewModel.klineStore.priceChange24h
         let sign = change >= 0 ? "+" : ""
-        return "\(sign)\(Self.changeFormatter.string(from: change as NSDecimalNumber) ?? "\(change)")%"
+        return "\(sign)\(AppFormatters.change.string(from: change as NSDecimalNumber) ?? "\(change)")%"
     }
 
     private var changeColor: Color {

@@ -99,18 +99,7 @@ struct PriceAxisView: View {
 
     // MARK: - Formatting
 
-    private static let priceFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 0
-        f.maximumFractionDigits = 0
-        f.usesGroupingSeparator = true
-        f.groupingSeparator = ","
-        return f
-    }()
-
     private static func formatPrice(_ price: CGFloat) -> String {
-        Self.priceFormatter.string(from: NSNumber(value: Double(price))) ?? "\(Int(price))"
+        AppFormatters.axisPrice.string(from: NSNumber(value: Double(price))) ?? "\(Int(price))"
     }
 }

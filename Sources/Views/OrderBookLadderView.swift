@@ -9,27 +9,6 @@ struct OrderBookLadderView: View {
 
     let orderBookStore: OrderBookStore
 
-    private static let priceFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 2
-        f.maximumFractionDigits = 2
-        f.groupingSeparator = ","
-        f.usesGroupingSeparator = true
-        return f
-    }()
-
-    private static let qtyFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 4
-        f.maximumFractionDigits = 4
-        f.usesGroupingSeparator = false
-        return f
-    }()
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Column headers
@@ -151,10 +130,10 @@ struct OrderBookLadderView: View {
     }
 
     private func formatPrice(_ value: Decimal) -> String {
-        Self.priceFormatter.string(from: value as NSDecimalNumber) ?? value.description
+        AppFormatters.price.string(from: value as NSDecimalNumber) ?? value.description
     }
 
     private func formatQty(_ value: Decimal) -> String {
-        Self.qtyFormatter.string(from: value as NSDecimalNumber) ?? value.description
+        AppFormatters.quantity.string(from: value as NSDecimalNumber) ?? value.description
     }
 }

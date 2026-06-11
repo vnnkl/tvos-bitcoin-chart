@@ -76,17 +76,7 @@ struct AlertOverlayView: View {
 
     // MARK: - Formatting
 
-    private static let priceFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 2
-        f.maximumFractionDigits = 2
-        f.usesGroupingSeparator = true
-        return f
-    }()
-
     private func formatPrice(_ price: Decimal) -> String {
-        Self.priceFormatter.string(from: price as NSDecimalNumber) ?? "\(price)"
+        AppFormatters.price.string(from: price as NSDecimalNumber) ?? "\(price)"
     }
 }
