@@ -2,10 +2,10 @@ import SwiftUI
 
 /// Terminal-style price annotations drawn over the candlestick canvas:
 ///
-/// - **Current price**: a yellow → arrow at the last close's Y position,
-///   offset left of the last candle with the same gap the extremes labels use
-///   (so it never sits on top of the candle body) — visually continuing into
-///   the yellow price label drawn by `PriceAxisView` in the axis column.
+/// - **Current price**: a yellow ← arrow at the last close's Y position,
+///   hugging the chart's right edge and pointing at the last candle from the
+///   axis side — visually continuing the yellow price label drawn by
+///   `PriceAxisView` in the axis column beside it.
 /// - **Visible-range extremes**: the highest high and lowest low of the visible
 ///   klines, labeled beside the candle that set them ("62,660 →" / "← 61,333").
 ///   The label sits on whichever side of the candle has more room, with the
@@ -46,16 +46,15 @@ struct ChartMarkersOverlayView: View {
             let layout = CandleLayout(count: klines.count, width: size.width)
             let scale = PriceScale(priceMin: priceMin, priceRange: priceRange)
 
-            // ── Current price arrow beside the last candle ─────────────
-            // Same glyph, gap, and anchoring as the extremes labels, in
-            // terminal-yellow — offset so it never overlaps the candle body.
+            // ── Current price arrow at the right edge ──────────────────
+            // Same text-arrow style as the extremes labels, in terminal-
+            // yellow, pointing at the last candle from the axis side.
             if let currentClose {
                 let y = scale.y(currentClose, in: size.height)
-                let centerX = layout.centerX(for: klines.count - 1)
-                let arrow = Text("→")
+                let arrow = Text("←")
                     .font(Self.labelFont)
                     .foregroundColor(AppTheme.markerYellow)
-                context.draw(arrow, at: CGPoint(x: centerX - Self.labelGap, y: y), anchor: .trailing)
+                context.draw(arrow, at: CGPoint(x: size.width - 2, y: y), anchor: .trailing)
             }
 
             // ── Visible-range high / low labels ────────────────────────
