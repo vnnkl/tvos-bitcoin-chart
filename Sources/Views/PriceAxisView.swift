@@ -62,11 +62,11 @@ struct PriceAxisView: View {
                 }
 
                 // Live price in terminal-yellow, drawn over the ticks with an
-                // opaque backing so it stays legible. Continues the yellow
-                // arrowhead `ChartMarkersOverlayView` draws at the chart edge.
+                // opaque backing so it stays legible. The ← points at the last
+                // candle from the axis column, so it never overlaps the chart.
                 if let currentPrice {
                     let y = scale.y(currentPrice, in: size.height)
-                    Text(Self.formatPrice(CGFloat(NSDecimalNumber(decimal: currentPrice).doubleValue)))
+                    Text("← \(Self.formatPrice(CGFloat(NSDecimalNumber(decimal: currentPrice).doubleValue)))")
                         .font(.system(size: 18, weight: .bold, design: .monospaced))
                         .foregroundStyle(AppTheme.markerYellow)
                         .lineLimit(1)
