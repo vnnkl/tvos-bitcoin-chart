@@ -24,39 +24,6 @@ struct STRCAccumulationView: View {
         filings.reduce(0) { $0 + $1.sharesSold }
     }
 
-    // MARK: - Formatters
-
-    private static let btcFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 2
-        f.maximumFractionDigits = 4
-        f.groupingSeparator = ","
-        f.usesGroupingSeparator = true
-        return f
-    }()
-
-    private static let proceedsFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .currency
-        f.currencyCode = "USD"
-        f.minimumFractionDigits = 1
-        f.maximumFractionDigits = 2
-        // Display in billions
-        return f
-    }()
-
-    private static let sharesFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .decimal
-        f.usesGroupingSeparator = true
-        f.maximumFractionDigits = 0
-        return f
-    }()
-
     // MARK: - Body
 
     var body: some View {
@@ -79,7 +46,7 @@ struct STRCAccumulationView: View {
                 summaryCell(
                     icon: "bitcoinsign.circle.fill",
                     label: "Est. BTC Purchased",
-                    value: Self.btcFormatter.string(from: NSNumber(value: totalEstimatedBTC)) ?? "0",
+                    value: AppFormatters.btcHoldings.string(from: NSNumber(value: totalEstimatedBTC)) ?? "0",
                     valueColor: AppTheme.strcAccent
                 )
                 summaryCell(
@@ -91,7 +58,7 @@ struct STRCAccumulationView: View {
                 summaryCell(
                     icon: "chart.bar.fill",
                     label: "Shares Sold",
-                    value: Self.sharesFormatter.string(from: NSNumber(value: totalShares)) ?? "0",
+                    value: AppFormatters.shares.string(from: NSNumber(value: totalShares)) ?? "0",
                     valueColor: AppTheme.textPrimary
                 )
             }

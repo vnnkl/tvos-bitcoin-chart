@@ -14,6 +14,7 @@ struct TimeframeSelectorView: View {
 
     @Binding var activeInterval: String
     var onSelect: (String) -> Void
+    var focusScope: Namespace.ID?
 
     @FocusState private var focusedInterval: String?
 
@@ -34,6 +35,17 @@ struct TimeframeSelectorView: View {
         let isActive = interval == activeInterval
         let isFocused = focusedInterval == interval
 
+        Group {
+            if let focusScope {
+                button(for: interval, isActive: isActive, isFocused: isFocused)
+                    .prefersDefaultFocus(isActive, in: focusScope)
+            } else {
+                button(for: interval, isActive: isActive, isFocused: isFocused)
+            }
+        }
+    }
+
+    private func button(for interval: String, isActive: Bool, isFocused: Bool) -> some View {
         Button {
             onSelect(interval)
         } label: {
@@ -57,10 +69,11 @@ struct TimeframeSelectorView: View {
 
 #Preview {
     @Previewable @State var active = "1h"
+    @Previewable @Namespace var previewFocusScope
 
-    TimeframeSelectorView(activeInterval: $active) { interval in
+    TimeframeSelectorView(activeInterval: $active, onSelect: { interval in
         active = interval
-    }
+    }, focusScope: previewFocusScope)
     .frame(width: 1280, height: 80)
     .background(AppTheme.background)
 }

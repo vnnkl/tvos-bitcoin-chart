@@ -72,23 +72,11 @@ struct TimeAxisView: View {
         "1h", "2h", "4h", "6h", "12h"
     ]
 
-    private static let intradayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        return f
-    }()
-
-    private static let dailyFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "MMM dd"
-        return f
-    }()
-
     private func formatDate(_ date: Date) -> String {
         if Self.intradayIntervals.contains(currentInterval) {
-            return Self.intradayFormatter.string(from: date)
+            return AppFormatters.axisIntraday.string(from: date)
         } else {
-            return Self.dailyFormatter.string(from: date)
+            return AppFormatters.axisDaily.string(from: date)
         }
     }
 }

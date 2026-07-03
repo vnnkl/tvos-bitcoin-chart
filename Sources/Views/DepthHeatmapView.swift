@@ -69,6 +69,7 @@ struct DepthHeatmapView: View {
         //   newest snapshot  → column klineCount - 1
         //   oldest snapshot  → column klineCount - snapshots.count
         let startColumn = klineCount - snapshots.count
+        let scale = PriceScale(priceMin: priceMin, priceRange: priceRange)
 
         for (i, snapshot) in snapshots.enumerated() {
             let columnIndex = startColumn + i
@@ -84,8 +85,8 @@ struct DepthHeatmapView: View {
                 // Clip levels outside the visible price range.
                 guard p >= priceMin, p <= priceMin + priceRange else { continue }
 
-                // Y-axis inversion: same formula as CandlestickChartView.priceY
-                let y = height - ((p - priceMin) / priceRange) * height
+                // Y-axis inversion: same scale as CandlestickChartView
+                let y = scale.y(p, in: height)
 
                 let qty = NSDecimalNumber(decimal: level.quantity).doubleValue
                 let normalized = log(1 + qty) / maxQtyLog

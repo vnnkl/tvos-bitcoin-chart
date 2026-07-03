@@ -5,7 +5,7 @@ import SwiftUI
 /// Follows the exact same overlay pattern as `CrosshairOverlayView`:
 /// - Uses `GeometryReader` + `Canvas` so it fills the chart ZStack's bounds.
 /// - Applies `.allowsHitTesting(false)` so it never intercepts Siri Remote focus.
-/// - Uses the same `priceYCoord` formula as `CrosshairOverlayView` / `CandlestickChartView`.
+/// - Uses the same `PriceScale` geometry as `CrosshairOverlayView` / `CandlestickChartView`.
 ///
 /// **Visual encoding:**
 /// - `.above` alerts: yellow (`AppTheme.alertLine`) dashed line — "waiting to cross up"
@@ -25,6 +25,10 @@ struct AlertOverlayView: View {
     /// Padded price range — matches `priceExtents()` output in ChartContainerView.
     let priceRange: CGFloat
 
+    private var scale: PriceScale {
+        PriceScale(priceMin: priceMin, priceRange: priceRange)
+    }
+
     var body: some View {
         GeometryReader { geo in
             let size = geo.size
@@ -32,7 +36,7 @@ struct AlertOverlayView: View {
                 // Canvas for dashed lines (Canvas doesn't support text, so labels are in ZStack overlay)
                 Canvas { ctx, canvasSize in
                     for alert in alerts {
-                        let y = priceYCoord(alert.price, in: canvasSize.height)
+                        let y = scale.y(alert.price, in: canvasSize.height)
                         let color: Color = alert.direction == .above ? AppTheme.alertLine : AppTheme.candleDown
                         let opacity: Double = alert.hasTriggered ? 0.35 : 1.0
                         let shading = GraphicsContext.Shading.color(color.opacity(opacity))
@@ -51,7 +55,7 @@ struct AlertOverlayView: View {
 
                 // Price labels at the right edge — rendered as SwiftUI Text for TV legibility.
                 ForEach(alerts) { alert in
-                    let y = priceYCoord(alert.price, in: size.height)
+                    let y = scale.y(alert.price, in: size.height)
                     let labelColor: Color = alert.direction == .above ? AppTheme.alertLine : AppTheme.candleDown
                     let opacity: Double = alert.hasTriggered ? 0.35 : 1.0
                     Text(formatPrice(alert.price))
@@ -70,28 +74,9 @@ struct AlertOverlayView: View {
         .allowsHitTesting(false)   // transparent to Siri Remote focus — must not steal chart interaction
     }
 
-    // MARK: - Geometry helper
-
-    /// Maps a price value to a Y coordinate using the same formula as `CrosshairOverlayView`.
-    private func priceYCoord(_ price: Decimal, in height: CGFloat) -> CGFloat {
-        let p = CGFloat(NSDecimalNumber(decimal: price).doubleValue)
-        guard priceRange > 0 else { return height / 2 }
-        return height - ((p - priceMin) / priceRange) * height
-    }
-
     // MARK: - Formatting
 
-    private static let priceFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 2
-        f.maximumFractionDigits = 2
-        f.usesGroupingSeparator = true
-        return f
-    }()
-
     private func formatPrice(_ price: Decimal) -> String {
-        Self.priceFormatter.string(from: price as NSDecimalNumber) ?? "\(price)"
+        AppFormatters.price.string(from: price as NSDecimalNumber) ?? "\(price)"
     }
 }

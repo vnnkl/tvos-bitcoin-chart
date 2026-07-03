@@ -15,16 +15,6 @@ struct AlertBannerView: View {
 
     let alert: PriceAlert
 
-    private static let priceFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 2
-        f.maximumFractionDigits = 2
-        f.usesGroupingSeparator = true
-        return f
-    }()
-
     var body: some View {
         HStack(spacing: 16) {
             // Bell icon
@@ -65,7 +55,7 @@ struct AlertBannerView: View {
     // MARK: - Helpers
 
     private var formattedPrice: String {
-        "$\(Self.priceFormatter.string(from: alert.price as NSDecimalNumber) ?? "\(alert.price)")"
+        "$\(AppFormatters.price.string(from: alert.price as NSDecimalNumber) ?? "\(alert.price)")"
     }
 
     private var directionSystemImage: String {

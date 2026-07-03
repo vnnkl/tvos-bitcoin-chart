@@ -47,12 +47,13 @@ struct IndicatorOverlayView: View {
     ) {
         guard series.count >= 2 else { return }
 
+        let scale = PriceScale(priceMin: priceMin, priceRange: priceRange)
         let startIndex = klines.count - series.count
         var path = Path()
 
         for (offset, point) in series.enumerated() {
             let x = layout.centerX(for: startIndex + offset)
-            let y = priceY(point.value, in: size.height, min: priceMin, range: priceRange)
+            let y = scale.y(point.value, in: size.height)
 
             if offset == 0 {
                 path.move(to: CGPoint(x: x, y: y))

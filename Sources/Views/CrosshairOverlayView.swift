@@ -18,13 +18,17 @@ struct CrosshairOverlayView: View {
     let priceMin: CGFloat
     let priceRange: CGFloat
 
+    private var scale: PriceScale {
+        PriceScale(priceMin: priceMin, priceRange: priceRange)
+    }
+
     var body: some View {
         GeometryReader { geo in
             let size  = geo.size
             let kline = klines[crosshairIndex]
             let layout = CandleLayout(count: klines.count, width: size.width)
             let cx    = layout.centerX(for: crosshairIndex)
-            let cy    = priceYCoord(kline.close, in: size.height)
+            let cy    = scale.y(kline.close, in: size.height)
 
             // ── Canvas: vertical line, horizontal line, intersection dot ──
             Canvas { ctx, canvasSize in
@@ -77,7 +81,7 @@ struct CrosshairOverlayView: View {
             : crosshairX + margin
 
         // Clamp Y so the tooltip never clips the top edge.
-        let rawY = priceYCoord(kline.close, in: canvasSize.height) - tooltipHeight / 2
+        let rawY = scale.y(kline.close, in: canvasSize.height) - tooltipHeight / 2
         let tooltipY = max(margin, min(rawY, canvasSize.height - tooltipHeight - margin))
 
         OHLCVTooltip(kline: kline)
@@ -88,14 +92,6 @@ struct CrosshairOverlayView: View {
             )
     }
 
-    // MARK: - Geometry helper
-
-    /// Maps a price value to a Y coordinate on the canvas (same formula as CandlestickChartView).
-    private func priceYCoord(_ price: Decimal, in height: CGFloat) -> CGFloat {
-        let p = CGFloat(NSDecimalNumber(decimal: price).doubleValue)
-        guard priceRange > 0 else { return height / 2 }
-        return height - ((p - priceMin) / priceRange) * height
-    }
 }
 
 // MARK: - OHLCV Tooltip sub-view
@@ -105,36 +101,9 @@ private struct OHLCVTooltip: View {
 
     let kline: Kline
 
-    private static let priceFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 2
-        f.maximumFractionDigits = 2
-        f.usesGroupingSeparator = true
-        return f
-    }()
-
-    private static let volFormatter: NumberFormatter = {
-        let f: NumberFormatter = .init()
-        f.locale = Locale(identifier: "en_US")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 4
-        f.maximumFractionDigits = 4
-        f.usesGroupingSeparator = true
-        return f
-    }()
-
-    private static let dateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateStyle = .none
-        f.timeStyle = .short
-        return f
-    }()
-
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(Self.dateFormatter.string(from: kline.openTime))
+            Text(AppFormatters.tooltipTime.string(from: kline.openTime))
                 .font(AppTheme.bodyFont)
                 .foregroundStyle(AppTheme.textSecondary)
 
@@ -177,10 +146,10 @@ private struct OHLCVTooltip: View {
     }
 
     private func format(_ price: Decimal) -> String {
-        Self.priceFormatter.string(from: price as NSDecimalNumber) ?? "\(price)"
+        AppFormatters.price.string(from: price as NSDecimalNumber) ?? "\(price)"
     }
 
     private func formatVol(_ vol: Decimal) -> String {
-        Self.volFormatter.string(from: vol as NSDecimalNumber) ?? "\(vol)"
+        AppFormatters.volume.string(from: vol as NSDecimalNumber) ?? "\(vol)"
     }
 }
