@@ -22,6 +22,9 @@ struct PriceAxisView: View {
     let priceMin: CGFloat
     /// Padded price range — must match `priceExtents()` output.
     let priceRange: CGFloat
+    /// Live price highlighted in terminal-yellow at its exact Y position.
+    /// `nil` hides the marker (e.g. while no data is loaded).
+    var currentPrice: Decimal? = nil
 
     private var scale: PriceScale {
         PriceScale(priceMin: priceMin, priceRange: priceRange)
@@ -56,6 +59,22 @@ struct PriceAxisView: View {
                         .minimumScaleFactor(0.6)
                         .frame(width: size.width - 10, alignment: .leading)
                         .position(x: (size.width - 10) / 2 + 10, y: y)
+                }
+
+                // Live price in terminal-yellow, drawn over the ticks with an
+                // opaque backing so it stays legible. Continues the yellow
+                // arrowhead `ChartMarkersOverlayView` draws at the chart edge.
+                if let currentPrice {
+                    let y = scale.y(currentPrice, in: size.height)
+                    Text(Self.formatPrice(CGFloat(NSDecimalNumber(decimal: currentPrice).doubleValue)))
+                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .foregroundStyle(AppTheme.markerYellow)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .padding(.horizontal, 4)
+                        .background(AppTheme.background)
+                        .frame(width: size.width - 6, alignment: .leading)
+                        .position(x: (size.width - 6) / 2 + 6, y: min(max(y, 12), size.height - 12))
                 }
             }
         }

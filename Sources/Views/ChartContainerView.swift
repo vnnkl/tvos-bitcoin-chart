@@ -51,7 +51,10 @@ struct ChartContainerView: View {
                                 viewModel.exitExploration()
                             }
 
-                        VolumeBarView(klines: viewModel.visibleKlines)
+                        VolumeBarView(
+                            klines: viewModel.visibleKlines,
+                            trailingGutter: AppTheme.priceAxisWidth
+                        )
                             .frame(
                                 maxWidth: .infinity,
                                 maxHeight: geometry.size.height * AppTheme.volumeHeightRatio
@@ -396,6 +399,13 @@ struct ChartContainerView: View {
                         priceRange: pRange
                     )
 
+                    ChartMarkersOverlayView(
+                        klines: klines,
+                        priceMin: pMin,
+                        priceRange: pRange,
+                        showsExtremes: viewModel.chartMode == .candlestick
+                    )
+
                     if viewModel.isExploring,
                        let idx = viewModel.crosshairIndex,
                        !klines.isEmpty {
@@ -416,8 +426,12 @@ struct ChartContainerView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 // Price Y-axis panel on the right edge
-                PriceAxisView(priceMin: pMin, priceRange: pRange)
-                    .frame(width: AppTheme.priceAxisWidth)
+                PriceAxisView(
+                    priceMin: pMin,
+                    priceRange: pRange,
+                    currentPrice: klines.last?.close
+                )
+                .frame(width: AppTheme.priceAxisWidth)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 

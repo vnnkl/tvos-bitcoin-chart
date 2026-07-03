@@ -124,6 +124,12 @@ enum AppTheme {
     /// Blue accent for highlights and labels on the STRC tab.
     static let strcAccent         = Color(red: 0.35, green: 0.64, blue: 1.0)
 
+    // MARK: - Markers
+
+    /// Terminal-yellow used for the current-price arrowhead, the live price on
+    /// the axis, and the current-volume label — classic curses-chart affordance.
+    static let markerYellow = Color(red: 0.95, green: 0.87, blue: 0.20)
+
     // MARK: - Alerts
 
     /// Horizontal alert threshold line on the chart canvas.
