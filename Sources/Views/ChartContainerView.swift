@@ -4,18 +4,18 @@ import SwiftUI
 ///
 /// ```
 /// ┌──────────────────────────────────────────────────────────────────────┐
-/// │  BTC/USDT  71,234.56  +2.41%  │  1m 3m 5m … 1w  │  Candlestick ● │ ← compact header
-/// ├──────────────────────────────────────────┬────────────────────────────┤
-/// │                                          │ PRICE       QTY    TOTAL │
-/// │                                          │ 71,235.10   0.42   1.89  │ ← asks (red)
-/// │  Candlestick / Line chart                │ 71,235.00   0.18   1.47  │
-/// │  + depth heatmap behind                  │ ── Spread: 0.10 ──────── │
-/// │  + volume bars (bottom 18%)              │ 71,234.90   0.55   2.01  │ ← bids (green)
-/// │                                          │ 71,234.80   0.33   1.46  │
-/// │                                          ├──────────────────────────│
-/// │                                          │ TIME      PRICE     QTY  │
-/// │                                          │ 09:41:23  71235.1  0.02  │ ← trades
-/// └──────────────────────────────────────────┴────────────────────────────┘
+/// │ [₿] BTC/USDT  71,234.56 [+2.41%] │ 1m 3m … 1w │ ⊖ ⊕ Candle Line ● │ ← header
+/// │  Regime: Balanced flow …             24H HIGH │ 24H LOW │ 24H VOL   │ ← strip
+/// ├──────────────────────────────────────────┬───────────────────────────┤
+/// │                                          │ ╭─ ORDER BOOK ─────────╮ │
+/// │  Candlestick / Line chart                │ │ bid/ask gauge         │ │
+/// │  + depth heatmap behind                  │ │ depth-bar ladder      │ │
+/// │  + volume bars (bottom 18%)              │ │ cumulative depth      │ │
+/// │                                          │ ╰───────────────────────╯ │
+/// │                                          │ ╭─ TRADES ─────────────╮ │
+/// │                                          │ │ buy/sell pressure     │ │
+/// │                                          │ │ live feed             │ │
+/// └──────────────────────────────────────────┴─╰───────────────────────╯─┘
 ///                                            ▲ 420 pt sidebar
 /// ```
 struct ChartContainerView: View {
@@ -25,7 +25,10 @@ struct ChartContainerView: View {
     var alertStore: AlertStore?
 
     @Namespace private var headerFocusScope
-    @FocusState private var focusedMode: ChartMode?
+
+    /// Direction of the most recent price tick: +1 up, −1 down, 0 before first tick.
+    /// Drives the Binance-style persistent tint on the big price readout.
+    @State private var tickDirection = 0
 
     var body: some View {
         GeometryReader { geometry in
@@ -35,15 +38,10 @@ struct ChartContainerView: View {
                 headerBar
                     .focusScope(headerFocusScope)
                     .focusSection()
-                    .padding(.bottom, 2)
-
-                // Thin separator below header
-                Rectangle()
-                    .fill(AppTheme.separator)
-                    .frame(height: 1)
+                    .padding(.bottom, 10)
 
                 // ── Main content ───────────────────────────────────
-                HStack(spacing: 0) {
+                HStack(spacing: 12) {
 
                     // Left: chart + volume
                     VStack(spacing: 0) {
@@ -53,7 +51,10 @@ struct ChartContainerView: View {
                                 viewModel.exitExploration()
                             }
 
-                        VolumeBarView(klines: viewModel.visibleKlines)
+                        VolumeBarView(
+                            klines: viewModel.visibleKlines,
+                            trailingGutter: AppTheme.priceAxisWidth
+                        )
                             .frame(
                                 maxWidth: .infinity,
                                 maxHeight: geometry.size.height * AppTheme.volumeHeightRatio
@@ -63,25 +64,22 @@ struct ChartContainerView: View {
                         indicatorPanels
                     }
 
-                    // Vertical separator
-                    Rectangle()
-                        .fill(AppTheme.separator)
-                        .frame(width: 1)
-                        .padding(.vertical, 4)
-
                     // Right: sidebar
                     sidebar
                         .frame(width: AppTheme.sidebarWidth)
                         .focusSection()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.top, 2)
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 0)
+            .padding(.bottom, 12)
         }
         .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
         .background(AppTheme.background.ignoresSafeArea())
+        .onChange(of: viewModel.klineStore.currentPrice) { oldPrice, newPrice in
+            if newPrice > oldPrice { tickDirection = 1 }
+            else if newPrice < oldPrice { tickDirection = -1 }
+        }
         .overlay(alignment: .top) {
             VStack(spacing: 10) {
                 if let alert = viewModel.triggeredAlert {
@@ -116,27 +114,13 @@ struct ChartContainerView: View {
         .animation(.easeInOut(duration: 0.3), value: viewModel.connectionHealth)
     }
 
-    // MARK: - Header bar (single compact row)
+    // MARK: - Header bar
 
     @ViewBuilder
     private var headerBar: some View {
         VStack(spacing: 10) {
             HStack(spacing: 0) {
-                HStack(alignment: .firstTextBaseline, spacing: 16) {
-                    Text("BTC/USDT")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundStyle(AppTheme.textSecondary)
-
-                    Text(formattedPrice)
-                        .font(.system(size: 44, weight: .heavy, design: .monospaced))
-                        .foregroundStyle(AppTheme.textPrimary)
-                        .contentTransition(.numericText())
-
-                    Text(formattedChange)
-                        .font(.system(size: 28, weight: .bold, design: .monospaced))
-                        .foregroundStyle(changeColor)
-                        .contentTransition(.numericText())
-                }
+                identityBlock
 
                 Spacer(minLength: 24)
 
@@ -151,37 +135,110 @@ struct ChartContainerView: View {
                 Spacer(minLength: 24)
 
                 HStack(spacing: 16) {
-                    HStack(spacing: 8) {
-                        Button { viewModel.zoomOut() } label: {
-                            Image(systemName: "minus.magnifyingglass")
-                                .font(.system(size: 24, weight: .medium))
-                                .foregroundStyle(AppTheme.textPrimary)
-                                .frame(minWidth: 52, minHeight: 52)
-                                .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.12)))
-                        }
-                        .buttonStyle(.plain)
-                        .focusEffectDisabled()
-                        .disabled(viewModel.zoomLevel <= -3)
-
-                        Button { viewModel.zoomIn() } label: {
-                            Image(systemName: "plus.magnifyingglass")
-                                .font(.system(size: 24, weight: .medium))
-                                .foregroundStyle(AppTheme.textPrimary)
-                                .frame(minWidth: 52, minHeight: 52)
-                                .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.12)))
-                        }
-                        .buttonStyle(.plain)
-                        .focusEffectDisabled()
-                        .disabled(viewModel.zoomLevel >= 5)
-                    }
-
+                    zoomControls
                     chartModeToggle
                     ConnectionStatusView(state: viewModel.connectionHealth)
                 }
             }
 
-            MarketRegimeStripView(regime: viewModel.marketRegime)
+            // Context strip: market regime (left) + 24h session stats (right).
+            HStack(spacing: 10) {
+                MarketRegimeStripView(regime: viewModel.marketRegime)
+                statsStrip
+            }
         }
+    }
+
+    /// Brand/identity cluster: ₿ badge, pair + venue, live price, 24h change pill.
+    private var identityBlock: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(AppTheme.accent.opacity(0.16))
+                Image(systemName: "bitcoinsign")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(AppTheme.accent)
+            }
+            .frame(width: 48, height: 48)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("BTC / USDT")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("BINANCE · SPOT")
+                    .font(.system(size: 15, weight: .semibold))
+                    .tracking(1.8)
+                    .foregroundStyle(AppTheme.textMuted)
+            }
+
+            Text(formattedPrice)
+                .font(.system(size: 44, weight: .heavy, design: .monospaced))
+                .foregroundStyle(priceColor)
+                .contentTransition(.numericText())
+
+            changePill
+        }
+    }
+
+    private var changePill: some View {
+        HStack(spacing: 6) {
+            Image(systemName: viewModel.klineStore.priceChange24h >= 0
+                  ? "arrow.up.right" : "arrow.down.right")
+                .font(.system(size: 18, weight: .bold))
+            Text(formattedChange)
+                .font(.system(size: 24, weight: .bold, design: .monospaced))
+                .contentTransition(.numericText())
+        }
+        .foregroundStyle(changeColor)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Capsule().fill(changeColor.opacity(0.14)))
+    }
+
+    private var zoomControls: some View {
+        HStack(spacing: 8) {
+            Button { viewModel.zoomOut() } label: {
+                IconPillLabel(systemImage: "minus.magnifyingglass")
+            }
+            .buttonStyle(.plain)
+            .focusEffectDisabled()
+            .disabled(viewModel.zoomLevel <= -3)
+            .opacity(viewModel.zoomLevel <= -3 ? 0.35 : 1)
+
+            Button { viewModel.zoomIn() } label: {
+                IconPillLabel(systemImage: "plus.magnifyingglass")
+            }
+            .buttonStyle(.plain)
+            .focusEffectDisabled()
+            .disabled(viewModel.zoomLevel >= 5)
+            .opacity(viewModel.zoomLevel >= 5 ? 0.35 : 1)
+        }
+    }
+
+    /// Right-aligned 24h session statistics, styled to match the regime strip.
+    @ViewBuilder
+    private var statsStrip: some View {
+        if let stats = viewModel.klineStore.stats24h {
+            HStack(spacing: 20) {
+                StatBlock(label: "24h High", value: formatStatPrice(stats.high), tint: AppTheme.candleUp)
+                statsDivider
+                StatBlock(label: "24h Low", value: formatStatPrice(stats.low), tint: AppTheme.candleDown)
+                statsDivider
+                StatBlock(label: "24h Vol", value: "\(AppFormatters.compact(stats.volume)) BTC")
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.badgeCornerRadius)
+                    .fill(AppTheme.surface)
+            )
+        }
+    }
+
+    private var statsDivider: some View {
+        Rectangle()
+            .fill(AppTheme.separator)
+            .frame(width: 1, height: 30)
     }
 
     // MARK: - Sidebar
@@ -190,55 +247,71 @@ struct ChartContainerView: View {
     private var sidebar: some View {
         GeometryReader { geo in
             let orderBookHeight = geo.size.height * 0.58
-            let ladderHeight    = orderBookHeight * 0.6
-            let depthHeight     = orderBookHeight * 0.4
 
-            VStack(alignment: .leading, spacing: 0) {
-                // ── Order Book header ──
-                Text("ORDER BOOK")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(AppTheme.textMuted)
-                    .tracking(2)
-                    .padding(.bottom, 6)
+            VStack(spacing: 12) {
+                orderBookPanel
+                    .frame(height: orderBookHeight)
 
-                // ── Order Book Ladder (~60% of order book allocation) ──
-                OrderBookLadderView(orderBookStore: viewModel.orderBookStore)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: ladderHeight)
-                    .clipped()
-
-                // ── Ladder / Depth separator ──
-                Rectangle()
-                    .fill(AppTheme.separator)
-                    .frame(height: 1)
-                    .padding(.vertical, 4)
-
-                // ── Depth Chart (~40% of order book allocation) ──
-                DepthChartView(snapshot: viewModel.orderBookStore.snapshots.last)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: depthHeight)
-                    .clipped()
-
-                // ── Section separator ──
-                Rectangle()
-                    .fill(AppTheme.separator)
-                    .frame(height: 1)
-                    .padding(.vertical, 6)
-
-                // ── Trades Feed (remaining height) ──
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("TRADES")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(AppTheme.textMuted)
-                        .tracking(2)
-
-                    TradesFeedView(tradeStore: viewModel.tradeStore)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                .clipped()
+                tradesPanel
+                    .frame(maxHeight: .infinity)
             }
         }
-        .padding(.leading, 16)
+    }
+
+    private var orderBookPanel: some View {
+        let imbalance = viewModel.orderBookStore.snapshots.last?.bidImbalance ?? 0.5
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                PanelHeaderLabel(text: "Order Book", icon: "list.bullet.rectangle")
+                Spacer()
+                Text("\(Int((imbalance * 100).rounded()))% BID")
+                    .font(.system(size: 16, weight: .bold, design: .monospaced))
+                    .foregroundStyle(imbalance >= 0.5 ? AppTheme.candleUp : AppTheme.candleDown)
+            }
+
+            RatioBar(ratio: imbalance)
+
+            GeometryReader { inner in
+                VStack(alignment: .leading, spacing: 0) {
+                    OrderBookLadderView(orderBookStore: viewModel.orderBookStore)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: inner.size.height * 0.66)
+                        .clipped()
+
+                    Rectangle()
+                        .fill(AppTheme.separator)
+                        .frame(height: 1)
+                        .padding(.vertical, 6)
+
+                    DepthChartView(snapshot: viewModel.orderBookStore.snapshots.last)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
+                }
+            }
+        }
+        .terminalPanel(padding: 14)
+    }
+
+    private var tradesPanel: some View {
+        let buyRatio = viewModel.tradeStore.buyVolumeRatio()
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                PanelHeaderLabel(text: "Trades", icon: "arrow.left.arrow.right")
+                Spacer()
+                Text("\(Int((buyRatio * 100).rounded()))% BUY")
+                    .font(.system(size: 16, weight: .bold, design: .monospaced))
+                    .foregroundStyle(buyRatio >= 0.5 ? AppTheme.candleUp : AppTheme.candleDown)
+            }
+
+            RatioBar(ratio: buyRatio)
+
+            TradesFeedView(tradeStore: viewModel.tradeStore)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+        }
+        .terminalPanel(padding: 14)
     }
 
     // MARK: - Chart mode toggle
@@ -253,27 +326,13 @@ struct ChartContainerView: View {
 
     @ViewBuilder
     private func chartModeButton(_ mode: ChartMode, label: String) -> some View {
-        let isActive  = viewModel.chartMode == mode
-        let isFocused = focusedMode == mode
-
         Button {
             viewModel.chartMode = mode
         } label: {
-            Text(label)
-                .font(.system(size: 24, weight: isActive ? .bold : .medium, design: .monospaced))
-                .foregroundStyle(isActive ? .black : AppTheme.textPrimary)
-                .frame(minWidth: 64, minHeight: 52)
-                .padding(.horizontal, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(isActive ? AppTheme.candleUp : Color(white: 0.12))
-                )
+            PillLabel(text: label, isActive: viewModel.chartMode == mode)
         }
         .buttonStyle(.plain)
         .focusEffectDisabled()
-        .focused($focusedMode, equals: mode)
-        .scaleEffect(isFocused ? 1.15 : 1.0)
-        .animation(.easeInOut(duration: 0.15), value: isFocused)
     }
 
     // MARK: - Chart area
@@ -340,6 +399,13 @@ struct ChartContainerView: View {
                         priceRange: pRange
                     )
 
+                    ChartMarkersOverlayView(
+                        klines: klines,
+                        priceMin: pMin,
+                        priceRange: pRange,
+                        showsExtremes: viewModel.chartMode == .candlestick
+                    )
+
                     if viewModel.isExploring,
                        let idx = viewModel.crosshairIndex,
                        !klines.isEmpty {
@@ -360,8 +426,12 @@ struct ChartContainerView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 // Price Y-axis panel on the right edge
-                PriceAxisView(priceMin: pMin, priceRange: pRange)
-                    .frame(width: AppTheme.priceAxisWidth)
+                PriceAxisView(
+                    priceMin: pMin,
+                    priceRange: pRange,
+                    currentPrice: klines.last?.close
+                )
+                .frame(width: AppTheme.priceAxisWidth)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -402,6 +472,17 @@ struct ChartContainerView: View {
         let change = viewModel.klineStore.priceChange24h
         let sign = change >= 0 ? "+" : ""
         return "\(sign)\(AppFormatters.change.string(from: change as NSDecimalNumber) ?? "\(change)")%"
+    }
+
+    private func formatStatPrice(_ value: Decimal) -> String {
+        AppFormatters.axisPrice.string(from: value as NSDecimalNumber) ?? "\(value)"
+    }
+
+    /// Tint for the big price readout: follows the direction of the last tick.
+    private var priceColor: Color {
+        if tickDirection > 0 { return AppTheme.candleUp }
+        if tickDirection < 0 { return AppTheme.candleDown }
+        return AppTheme.textPrimary
     }
 
     private var changeColor: Color {

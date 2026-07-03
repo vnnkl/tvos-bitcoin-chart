@@ -6,7 +6,7 @@ A real-time Bitcoin trading terminal for Apple TV. Live candlestick charts, orde
 
 ![tvOS 17+](https://img.shields.io/badge/platform-tvOS%2017%2B-black?logo=apple)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)
-![Tests](https://img.shields.io/badge/tests-161%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-218%20passing-brightgreen)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 
 **Quick Start**
@@ -30,8 +30,9 @@ brew install xcodegen && xcodegen generate && open BitcoinTerminal.xcodeproj
 | Feature | What It Does |
 |---------|--------------|
 | **13 Timeframes** | 1m to 1w candlestick charts, switchable with the Siri Remote |
-| **Live Order Book** | 20-level depth ladder, depth chart, and thermal heatmap overlay |
-| **Real-Time Trades** | Color-coded buy/sell feed streaming via WebSocket |
+| **Live Order Book** | Depth-bar ladder, bid/ask imbalance gauge, depth chart, and thermal heatmap overlay |
+| **Real-Time Trades** | Color-coded buy/sell feed with a live buy-pressure gauge |
+| **24h Session Stats** | High, low, and volume strip beside the market-regime readout |
 | **Price Alerts** | Set above/below thresholds; animated banner when price crosses |
 | **STRC Dashboard** | ATM status, BTC accumulation, SEC 8-K filings from strc.live |
 | **Crosshair Mode** | Play/Pause to enter; D-pad to explore individual candles |
@@ -44,7 +45,7 @@ brew install xcodegen && xcodegen generate && open BitcoinTerminal.xcodeproj
 
 ### Chart
 
-Live candlestick chart with order book depth ladder, depth chart, and real-time trade feed.
+Live candlestick chart with depth-bar order book ladder, bid/ask imbalance gauge, depth chart, and real-time trade feed with buy-pressure gauge.
 
 ![Chart Tab](docs/screenshots/chart-tab.png)
 
@@ -146,14 +147,15 @@ xcodebuild test \
 
 | Action | Control |
 |--------|---------|
-| Switch tabs | Swipe up to reveal tab bar, swipe left/right |
+| Reveal tab bar | Press Menu — bar fades in over the content |
+| Switch tabs | D-pad left/right on the tab bar, click to select |
+| Hide tab bar | Select a tab, or move focus down into the content |
 | Navigate timeframes | Swipe left/right on timeframe bar |
 | Zoom in/out | Focus zoom buttons in header, click |
 | Enter crosshair mode | Press Play/Pause |
 | Move crosshair | D-pad left/right |
 | Exit crosshair | Press Menu |
 | Select settings items | D-pad navigate, click |
-| Return to tab bar | Press Menu (when not in crosshair) |
 
 ---
 
@@ -202,7 +204,7 @@ xcodebuild test \
 - ATM status badge (Active when price ≥ $100 par, Standby below)
 - Annual dividend yield and vs-par distance
 - Next ex-dividend date, amount, pay date
-- Total estimated BTC accumulated (computed from `netProceeds / avgBtcPrice`)
+- Total estimated BTC accumulated (API-reported when present, otherwise derived from `netProceeds / avgBtcPrice`)
 - Total proceeds and shares sold
 - Top 10 SEC 8-K filings with type badges (ATM / IPO / Follow-On)
 - Auto-refresh every 60 seconds while scene is active
@@ -230,8 +232,9 @@ hasSeenDisclaimer  // true after first launch
 | Token | Value | Purpose |
 |-------|-------|---------|
 | Background | `#000000` (absolute black) | OLED-optimized |
-| Candle green | System green | Bullish candles, buy trades |
-| Candle red | System red | Bearish candles, sell trades |
+| Accent | `#F7931A` (Bitcoin orange) | Selection, focus rings, brand identity |
+| Candle green | `#2EBD85` | Bullish candles, buy trades |
+| Candle red | `#F6465D` | Bearish candles, sell trades |
 | Data font | Monospaced 22pt | Price labels at 10ft |
 | Edge padding | 60pt | tvOS safe area convention |
 | Sidebar width | 420pt | Order book + trades panel |
@@ -315,7 +318,7 @@ Deterministic fixture data for offline development: 5 klines, 1 order book snaps
 
 ## Tests
 
-161 tests across 12 suites:
+218 tests across 13 suite files:
 
 | Suite | Coverage |
 |-------|----------|
@@ -329,6 +332,7 @@ Deterministic fixture data for offline development: 5 klines, 1 order book snaps
 | `DepthChartTests` | Cumulative depth level computation |
 | `FormatterTests` | NumberFormatter precision |
 | `ZoomTests` | Geometric scaling, visible kline clamping |
+| `MarketStatsTests` | 24h high/low/volume, book imbalance, buy-pressure ratio, compact formatting |
 | `STRCModelTests` | STRC ticker/filing decoding |
 | `StubExchangeServiceTests` | Fixture correctness |
 

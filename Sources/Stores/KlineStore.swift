@@ -43,6 +43,33 @@ final class KlineStore: @unchecked Sendable {
         return (last.close - ref.close) / ref.close * 100
     }
 
+    /// Aggregated high / low / volume across the trailing-24h window.
+    struct Stats24h: Equatable, Sendable {
+        let high: Decimal
+        let low: Decimal
+        let volume: Decimal
+    }
+
+    /// High, low, and summed volume over the klines whose `openTime` falls within
+    /// 24 h of the newest candle. `nil` when no data is loaded.
+    var stats24h: Stats24h? {
+        guard let last = klines.last else { return nil }
+        let cutoff = last.openTime - 86_400          // 24 h in seconds
+        let window = klines.filter { $0.openTime >= cutoff }
+        guard let first = window.first else { return nil }
+
+        let aggregate = window.dropFirst().reduce(
+            Stats24h(high: first.high, low: first.low, volume: first.volume)
+        ) { acc, kline in
+            Stats24h(
+                high:   max(acc.high, kline.high),
+                low:    min(acc.low, kline.low),
+                volume: acc.volume + kline.volume
+            )
+        }
+        return aggregate
+    }
+
     // MARK: - Data ingestion
 
     /// Replace the store with sorted, bounded historical data.

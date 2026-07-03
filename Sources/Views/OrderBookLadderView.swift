@@ -9,6 +9,13 @@ struct OrderBookLadderView: View {
 
     let orderBookStore: OrderBookStore
 
+    /// Estimated height of one ladder row (font line height + vertical padding).
+    private static let rowHeight: CGFloat = 28
+    /// Estimated height of the spread separator row.
+    private static let spreadRowHeight: CGFloat = 36
+    /// Monospaced font sized so 4–6 levels per side fit in the sidebar panel.
+    private static let ladderFont: Font = .system(size: 20, weight: .medium, design: .monospaced)
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Column headers
@@ -16,7 +23,13 @@ struct OrderBookLadderView: View {
                 .padding(.bottom, 4)
 
             if let snapshot = orderBookStore.snapshots.last {
-                ladderContent(snapshot: snapshot)
+                GeometryReader { geo in
+                    // Fit as many complete levels per side as the panel height
+                    // allows — no clipped half-rows.
+                    let available = geo.size.height - Self.spreadRowHeight
+                    let perSide = max(3, min(6, Int(available / Self.rowHeight) / 2))
+                    ladderContent(snapshot: snapshot, displayCount: perSide)
+                }
             } else {
                 Text("Connecting…")
                     .font(AppTheme.dataFont)
@@ -44,9 +57,7 @@ struct OrderBookLadderView: View {
     // MARK: - Ladder content
 
     @ViewBuilder
-    private func ladderContent(snapshot: OrderBookSnapshot) -> some View {
-        let displayCount = 7
-
+    private func ladderContent(snapshot: OrderBookSnapshot, displayCount: Int) -> some View {
         let sortedAsks = snapshot.asks
             .sorted { $0.price < $1.price }
             .prefix(displayCount)
@@ -64,10 +75,14 @@ struct OrderBookLadderView: View {
         let asksCumulative = cumulativeQuantities(Array(sortedAsks))
         let bidsCumulative = cumulativeQuantities(Array(sortedBids))
 
+        // Depth bars are normalized against the deepest cumulative total on
+        // either side so bid and ask bars share one scale.
+        let maxCumulative = max(asksCumulative.last ?? 0, bidsCumulative.last ?? 0)
+
         VStack(spacing: 0) {
             // Asks (reversed: lowest ask nearest spread at bottom)
             ForEach(Array(zip(Array(sortedAsks), asksCumulative)).reversed(), id: \.0.price) { level, cumQty in
-                priceRow(level: level, cumQty: cumQty, color: AppTheme.candleDown)
+                priceRow(level: level, cumQty: cumQty, maxCumulative: maxCumulative, color: AppTheme.candleDown)
             }
 
             // Spread row
@@ -75,15 +90,19 @@ struct OrderBookLadderView: View {
 
             // Bids (highest bid first)
             ForEach(Array(zip(Array(sortedBids), bidsCumulative)), id: \.0.price) { level, cumQty in
-                priceRow(level: level, cumQty: cumQty, color: AppTheme.candleUp)
+                priceRow(level: level, cumQty: cumQty, maxCumulative: maxCumulative, color: AppTheme.candleUp)
             }
         }
     }
 
     // MARK: - Row builders
 
-    private func priceRow(level: PriceLevel, cumQty: Decimal, color: Color) -> some View {
-        HStack(spacing: 0) {
+    private func priceRow(level: PriceLevel, cumQty: Decimal, maxCumulative: Decimal, color: Color) -> some View {
+        let depthFraction = maxCumulative > 0
+            ? NSDecimalNumber(decimal: cumQty).doubleValue / NSDecimalNumber(decimal: maxCumulative).doubleValue
+            : 0
+
+        return HStack(spacing: 0) {
             Text(formatPrice(level.price))
                 .foregroundStyle(color)
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -94,8 +113,18 @@ struct OrderBookLadderView: View {
                 .foregroundStyle(AppTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .font(AppTheme.dataFont)
-        .padding(.vertical, 1)
+        .font(Self.ladderFont)
+        .padding(.vertical, 2)
+        .background(alignment: .trailing) {
+            // Cumulative depth bar growing from the right edge — the classic
+            // exchange-ladder visualization of resting liquidity.
+            GeometryReader { geo in
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(color.opacity(0.14))
+                    .frame(width: geo.size.width * depthFraction)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
     }
 
     private func spreadRow(spread: Decimal?) -> some View {

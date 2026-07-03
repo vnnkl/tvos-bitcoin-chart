@@ -63,10 +63,8 @@ struct STRCAccumulationView: View {
                 )
             }
         }
-        .padding(28)
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 200)
-        .background(AppTheme.strcCardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
+        .terminalPanel(padding: 28)
     }
 
     // MARK: - Sub-views

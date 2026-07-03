@@ -16,8 +16,6 @@ struct TimeframeSelectorView: View {
     var onSelect: (String) -> Void
     var focusScope: Namespace.ID?
 
-    @FocusState private var focusedInterval: String?
-
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
@@ -26,6 +24,7 @@ struct TimeframeSelectorView: View {
                 }
             }
             .padding(.horizontal, 4)
+            .padding(.vertical, 6)   // headroom for the focus scale/glow
         }
         .focusSection()
     }
@@ -33,37 +32,25 @@ struct TimeframeSelectorView: View {
     @ViewBuilder
     private func intervalButton(_ interval: String) -> some View {
         let isActive = interval == activeInterval
-        let isFocused = focusedInterval == interval
 
         Group {
             if let focusScope {
-                button(for: interval, isActive: isActive, isFocused: isFocused)
+                button(for: interval, isActive: isActive)
                     .prefersDefaultFocus(isActive, in: focusScope)
             } else {
-                button(for: interval, isActive: isActive, isFocused: isFocused)
+                button(for: interval, isActive: isActive)
             }
         }
     }
 
-    private func button(for interval: String, isActive: Bool, isFocused: Bool) -> some View {
+    private func button(for interval: String, isActive: Bool) -> some View {
         Button {
             onSelect(interval)
         } label: {
-            Text(interval)
-                .font(.system(size: 24, weight: isActive ? .bold : .medium, design: .monospaced))
-                .foregroundStyle(isActive ? .black : AppTheme.textPrimary)
-                .frame(minWidth: 64, minHeight: 52)
-                .padding(.horizontal, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(isActive ? AppTheme.candleUp : Color(white: 0.12))
-                )
+            PillLabel(text: interval, isActive: isActive)
         }
         .buttonStyle(.plain)
         .focusEffectDisabled()
-        .focused($focusedInterval, equals: interval)
-        .scaleEffect(isFocused ? 1.15 : 1.0)
-        .animation(.easeInOut(duration: 0.15), value: isFocused)
     }
 }
 

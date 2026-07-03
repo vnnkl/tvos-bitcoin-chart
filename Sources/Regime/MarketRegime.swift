@@ -61,7 +61,7 @@ func marketRegimeState(
         return MarketRegimeState(
             kind: .trendDownOffersHeavy,
             title: "Trend Down, Offers Heavy",
-            summary: "Price is slipping below trend while \(metrics.tradeBiasText) and \(metrics.bookBiasText)."
+            summary: "Price is slipping below trend with \(metrics.tradeBiasText) and \(metrics.bookBiasText)."
         )
     }
 
@@ -180,13 +180,13 @@ private struct MarketRegimeMetrics {
         isCompression = abs(shortChange) <= 0.0035 && averageRangeFraction <= 0.0045 && abs(tradeImbalance) <= 0.12
         tradeBiasText = marketRegimeBiasText(
             for: tradeImbalance,
-            positive: "buy flow still leads the tape",
-            negative: "sell flow is still pressing"
+            positive: "buy flow leading the tape",
+            negative: "sell flow pressing the tape"
         )
         bookBiasText = marketRegimeBiasText(
             for: depthImbalance,
-            positive: "bids are leaning heavier near the spread",
-            negative: "asks are leaning heavier near the spread"
+            positive: "bids leaning heavier near the spread",
+            negative: "asks leaning heavier near the spread"
         )
     }
 }
@@ -202,5 +202,5 @@ private func marketRegimeBiasText(for value: Double, positive: String, negative:
     if value <= -0.08 {
         return negative
     }
-    return "liquidity is staying roughly balanced"
+    return "liquidity staying roughly balanced"
 }

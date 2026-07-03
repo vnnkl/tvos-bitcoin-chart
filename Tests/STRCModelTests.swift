@@ -406,6 +406,123 @@ struct STRCSECFilingsTests {
         let response = try decoder.decode(STRCFilingsResponse.self, from: filingsFixtureJSON)
         #expect(response.filings[0].url.hasPrefix("https://www.sec.gov"))
     }
+
+    // The live API now reports actual BTC amounts — including fractional values
+    // like 381.61 — where it previously always sent null. A fractional value in
+    // any row must not fail the whole decode (this was the "Data temporarily
+    // unavailable" bug on the STRC tab).
+    @Test("Fractional btcPurchased and avgBtcPrice decode without error")
+    func decodesFractionalBtcFields() throws {
+        let json = """
+        {
+          "success": true,
+          "filings": [{
+            "ticker": "SATA",
+            "filedDate": "2026-06-22",
+            "url": "https://sec.gov",
+            "period": "Jun 14 - Jun 20",
+            "periodStart": "2026-06-15",
+            "periodEnd": "2026-06-21",
+            "sharesSold": 0,
+            "netProceeds": 0,
+            "btcPurchased": 381.61,
+            "avgBtcPrice": 65850.5,
+            "offeringType": "btc_update"
+          }]
+        }
+        """.data(using: .utf8)!
+        let decoder = makeDecoder()
+        let response = try decoder.decode(STRCFilingsResponse.self, from: json)
+        #expect(response.filings[0].btcPurchased == 381.61)
+        #expect(response.filings[0].avgBtcPrice == 65850.5)
+    }
+
+    @Test("estimatedBTCPurchased prefers the reported btcPurchased when present")
+    func estimatePrefersReportedValue() throws {
+        let json = """
+        {
+          "success": true,
+          "filings": [{
+            "ticker": "STRC",
+            "filedDate": "2026-06-22",
+            "url": "https://sec.gov",
+            "period": null,
+            "periodStart": null,
+            "periodEnd": null,
+            "sharesSold": 0,
+            "netProceeds": 9500000,
+            "btcPurchased": 381.61,
+            "avgBtcPrice": 95000,
+            "offeringType": "atm"
+          }]
+        }
+        """.data(using: .utf8)!
+        let decoder = makeDecoder()
+        let response = try decoder.decode(STRCFilingsResponse.self, from: json)
+        // Reported value (381.61) wins over derived 9,500,000 / 95,000 = 100.
+        #expect(response.filings[0].estimatedBTCPurchased == 381.61)
+    }
+
+    @Test("estimatedBTCPurchased falls back to derivation when btcPurchased is 0")
+    func estimateFallsBackOnZero() throws {
+        let json = """
+        {
+          "success": true,
+          "filings": [{
+            "ticker": "STRC",
+            "filedDate": "2026-06-22",
+            "url": "https://sec.gov",
+            "period": null,
+            "periodStart": null,
+            "periodEnd": null,
+            "sharesSold": 100,
+            "netProceeds": 9500000,
+            "btcPurchased": 0,
+            "avgBtcPrice": 95000,
+            "offeringType": "atm"
+          }]
+        }
+        """.data(using: .utf8)!
+        let decoder = makeDecoder()
+        let response = try decoder.decode(STRCFilingsResponse.self, from: json)
+        #expect(response.filings[0].estimatedBTCPurchased == 100.0)
+    }
+}
+
+// MARK: - Store Filtering Tests
+
+@Suite("STRCStore filing filter")
+struct STRCStoreFilterTests {
+
+    private func makeFiling(ticker: String) -> SECFiling {
+        SECFiling(
+            ticker: ticker,
+            filedDate: "2026-06-22",
+            url: "https://sec.gov",
+            period: nil,
+            periodStart: nil,
+            periodEnd: nil,
+            sharesSold: 0,
+            netProceeds: 0,
+            btcPurchased: nil,
+            avgBtcPrice: 95_000,
+            offeringType: "atm"
+        )
+    }
+
+    // The live feed mixes tickers (STRC + SATA). The STRC dashboard must not
+    // count other tickers' filings toward STRC accumulation totals.
+    @Test("update(filings:) keeps only STRC filings")
+    func filtersNonSTRCFilings() {
+        let store = STRCStore()
+        store.update(filings: [
+            makeFiling(ticker: "STRC"),
+            makeFiling(ticker: "SATA"),
+            makeFiling(ticker: "STRC")
+        ])
+        #expect(store.filings.count == 2)
+        #expect(store.filings.allSatisfy { $0.ticker == "STRC" })
+    }
 }
 
 // MARK: - Computed Property Tests

@@ -9,16 +9,20 @@ struct ConnectionStatusView: View {
     let state: ConnectionState
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             Circle()
                 .fill(dotColor)
                 .frame(width: 10, height: 10)
-                .shadow(color: dotColor.opacity(0.7), radius: 4)
+                .shadow(color: dotColor.opacity(0.8), radius: 5)
 
             Text(stateLabel)
-                .font(.system(size: 20, weight: .medium))
-                .foregroundStyle(AppTheme.textSecondary)
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(state == .connected ? dotColor : AppTheme.textSecondary)
         }
+        .padding(.horizontal, 16)
+        .frame(minHeight: 52)
+        .background(Capsule().fill(AppTheme.surface))
+        .overlay(Capsule().strokeBorder(dotColor.opacity(0.35), lineWidth: 1))
     }
 
     private var dotColor: Color {
