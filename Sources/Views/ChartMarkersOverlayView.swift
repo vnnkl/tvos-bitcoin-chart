@@ -2,9 +2,10 @@ import SwiftUI
 
 /// Terminal-style price annotations drawn over the candlestick canvas:
 ///
-/// - **Current price**: a yellow ◀ arrowhead at the chart's right edge, at the
-///   last close's Y position — visually continuing into the yellow price label
-///   drawn by `PriceAxisView` in the axis column beside it.
+/// - **Current price**: a yellow → arrow at the last close's Y position,
+///   offset left of the last candle with the same gap the extremes labels use
+///   (so it never sits on top of the candle body) — visually continuing into
+///   the yellow price label drawn by `PriceAxisView` in the axis column.
 /// - **Visible-range extremes**: the highest high and lowest low of the visible
 ///   klines, labeled beside the candle that set them ("62,660 →" / "← 61,333").
 ///   The label sits on whichever side of the candle has more room, with the
@@ -32,6 +33,8 @@ struct ChartMarkersOverlayView: View {
 
     private static let labelFont = Font.system(size: 18, weight: .semibold, design: .monospaced)
     private static let labelColor = Color(white: 0.88)
+    /// Horizontal gap between a label/arrow and the candle it points at.
+    private static let labelGap: CGFloat = 12
 
     var body: some View {
         let currentClose = klines.last?.close
@@ -43,15 +46,16 @@ struct ChartMarkersOverlayView: View {
             let layout = CandleLayout(count: klines.count, width: size.width)
             let scale = PriceScale(priceMin: priceMin, priceRange: priceRange)
 
-            // ── Current price arrowhead at the right edge ──────────────
+            // ── Current price arrow beside the last candle ─────────────
+            // Same glyph, gap, and anchoring as the extremes labels, in
+            // terminal-yellow — offset so it never overlaps the candle body.
             if let currentClose {
                 let y = scale.y(currentClose, in: size.height)
-                var arrow = Path()
-                arrow.move(to: CGPoint(x: size.width, y: y - 8))
-                arrow.addLine(to: CGPoint(x: size.width, y: y + 8))
-                arrow.addLine(to: CGPoint(x: size.width - 11, y: y))
-                arrow.closeSubpath()
-                context.fill(arrow, with: .color(AppTheme.markerYellow))
+                let centerX = layout.centerX(for: klines.count - 1)
+                let arrow = Text("→")
+                    .font(Self.labelFont)
+                    .foregroundColor(AppTheme.markerYellow)
+                context.draw(arrow, at: CGPoint(x: centerX - Self.labelGap, y: y), anchor: .trailing)
             }
 
             // ── Visible-range high / low labels ────────────────────────
@@ -64,11 +68,10 @@ struct ChartMarkersOverlayView: View {
                     .font(Self.labelFont)
                     .foregroundColor(Self.labelColor)
 
-                let gap: CGFloat = 12
                 if onLeft {
-                    context.draw(text, at: CGPoint(x: centerX - gap, y: y), anchor: .trailing)
+                    context.draw(text, at: CGPoint(x: centerX - Self.labelGap, y: y), anchor: .trailing)
                 } else {
-                    context.draw(text, at: CGPoint(x: centerX + gap, y: y), anchor: .leading)
+                    context.draw(text, at: CGPoint(x: centerX + Self.labelGap, y: y), anchor: .leading)
                 }
             }
         }
