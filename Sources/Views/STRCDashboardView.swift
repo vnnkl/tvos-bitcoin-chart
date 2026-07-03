@@ -69,22 +69,24 @@ struct STRCDashboardView: View {
                 dashboardHeader
 
                 // ── ATM Status Card ───────────────────────────────────
+                // focusableCard makes these read-only panels focus targets so
+                // the Siri Remote can traverse and scroll this dashboard.
                 STRCStatusCardView(
                     ticker: viewModel.store.tickerData?.tickers["STRC"],
                     isATMActive: viewModel.isATMActive
                 )
-                .focusSection()
+                .focusableCard()
 
                 // ── Accumulation Summary ──────────────────────────────
                 STRCAccumulationView(filings: viewModel.store.filings)
-                    .focusSection()
+                    .focusableCard()
 
                 // ── SEC Filings Table ─────────────────────────────────
                 STRCFilingsListView(filings: viewModel.store.filings)
-                    .focusSection()
+                    .focusableCard()
             }
-            .padding(.horizontal, 5)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 16)
         }
     }
 
@@ -92,9 +94,15 @@ struct STRCDashboardView: View {
 
     private var dashboardHeader: some View {
         HStack(alignment: .lastTextBaseline) {
-            Text("STRC Dashboard")
-                .font(AppTheme.headlineFont)
-                .foregroundStyle(AppTheme.textPrimary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("STRC Dashboard")
+                    .font(.system(size: 40, weight: .bold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("ATM STATUS · BTC ACCUMULATION · SEC FILINGS")
+                    .font(.system(size: 15, weight: .semibold))
+                    .tracking(2.2)
+                    .foregroundStyle(AppTheme.textMuted)
+            }
             Spacer()
             lastUpdatedLabel
         }

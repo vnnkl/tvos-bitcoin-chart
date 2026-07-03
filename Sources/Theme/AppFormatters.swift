@@ -128,6 +128,20 @@ enum AppFormatters {
         return f
     }()
 
+    /// Compact large-number display for header stats (e.g. `831.4`, `12.4K`, `1.28M`).
+    static func compact(_ value: Decimal) -> String {
+        let magnitude = NSDecimalNumber(decimal: value).doubleValue
+        let sign = magnitude < 0 ? "-" : ""
+        let abs = Swift.abs(magnitude)
+        switch abs {
+        case 1_000_000_000...: return "\(sign)\(String(format: "%.2f", abs / 1_000_000_000))B"
+        case 1_000_000...:     return "\(sign)\(String(format: "%.2f", abs / 1_000_000))M"
+        case 10_000...:        return "\(sign)\(String(format: "%.1f", abs / 1_000))K"
+        case 1_000...:         return "\(sign)\(String(format: "%.2f", abs / 1_000))K"
+        default:               return "\(sign)\(String(format: "%.1f", abs))"
+        }
+    }
+
     // MARK: - Dates
 
     /// Trade feed timestamps (e.g. `14:32:05`).

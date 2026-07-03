@@ -12,9 +12,11 @@ struct STRCFilingsResponse: Codable, Sendable {
 
 /// A single SEC 8-K ATM offering record.
 ///
-/// The `btcPurchased` field is always `null` in the raw API response.
-/// Use the `estimatedBTCPurchased` computed property to derive the value
-/// from `netProceeds / avgBtcPrice`.
+/// The `btcPurchased` field may be `null`, `0`, or an actual (possibly
+/// fractional) BTC amount like `381.61` — the API originally always sent
+/// `null` but now reports real values for some rows. Use the
+/// `estimatedBTCPurchased` computed property, which prefers the reported
+/// value and falls back to deriving it from `netProceeds / avgBtcPrice`.
 struct SECFiling: Codable, Sendable {
     /// Ticker symbol, e.g. `"STRC"` or `"SATA"`.
     let ticker: String
@@ -32,21 +34,24 @@ struct SECFiling: Codable, Sendable {
     let sharesSold: Int
     /// Net proceeds from the offering in whole dollars (not cents).
     let netProceeds: Int
-    /// Always `null` in the API — use `estimatedBTCPurchased` instead.
-    let btcPurchased: Int?
-    /// Average BTC price in whole dollars used to calculate BTC acquisitions.
-    let avgBtcPrice: Int
-    /// Offering type, e.g. `"atm"`, `"ipo"`, `"follow_on"`.
+    /// BTC purchased as reported by the API — often `null` or `0`, sometimes
+    /// a fractional amount. Prefer `estimatedBTCPurchased` for display.
+    let btcPurchased: Double?
+    /// Average BTC price in dollars used to calculate BTC acquisitions.
+    /// Fractional in some rows — must not be `Int` or the whole feed
+    /// fails to decode.
+    let avgBtcPrice: Double
+    /// Offering type, e.g. `"atm"`, `"ipo"`, `"follow_on"`, `"btc_update"`.
     let offeringType: String
 
     // MARK: - Derived
 
-    /// Estimated BTC purchased, derived as `netProceeds / avgBtcPrice`.
-    ///
-    /// The raw API always returns `null` for `btcPurchased`. The strc.live
-    /// dashboard derives this value locally — we match that calculation here.
+    /// BTC purchased for this filing: the API-reported value when present and
+    /// positive, otherwise derived as `netProceeds / avgBtcPrice` (matching
+    /// the strc.live dashboard's local calculation).
     var estimatedBTCPurchased: Double {
+        if let btcPurchased, btcPurchased > 0 { return btcPurchased }
         guard avgBtcPrice > 0 else { return 0 }
-        return Double(netProceeds) / Double(avgBtcPrice)
+        return Double(netProceeds) / avgBtcPrice
     }
 }

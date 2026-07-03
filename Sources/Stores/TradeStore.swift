@@ -31,6 +31,25 @@ final class TradeStore: @unchecked Sendable {
         self.maxTrades = maxTrades
     }
 
+    // MARK: - Computed
+
+    /// Taker-buy share of traded volume across the most recent `window` trades, in 0…1.
+    ///
+    /// Weighted by quantity, not trade count, so one large market sell outweighs
+    /// many small buys. Returns 0.5 when no trades are present so pressure gauges
+    /// render balanced.
+    func buyVolumeRatio(window: Int = 50) -> Double {
+        let recent = trades.prefix(window)
+        guard !recent.isEmpty else { return 0.5 }
+
+        let (buys, total) = recent.reduce((Decimal(0), Decimal(0))) { acc, trade in
+            (acc.0 + (trade.isBuy ? trade.quantity : 0), acc.1 + trade.quantity)
+        }
+        guard total > 0 else { return 0.5 }
+        return NSDecimalNumber(decimal: buys).doubleValue
+             / NSDecimalNumber(decimal: total).doubleValue
+    }
+
     // MARK: - Data ingestion
 
     /// Prepends a new trade at index 0, trimming oldest entries to stay within `maxTrades`.

@@ -2,28 +2,48 @@ import SwiftUI
 
 /// Central dark-theme palette and TV-appropriate sizing constants.
 ///
+/// Design language: "OLED trading desk" — absolute black canvas, hairline-stroked
+/// panels, Bitcoin-orange as the single accent for selection/focus, and refined
+/// market green/red reserved exclusively for direction semantics.
+///
 /// All values are static constants — never instantiated — so SwiftUI views
 /// reference them as `AppTheme.candleUp`, `AppTheme.edgePadding`, etc.
 enum AppTheme {
 
-    // MARK: - Background
+    // MARK: - Background & Surfaces
 
     /// Primary app background: absolute black for OLED-optimal contrast.
     static let background = Color.black
 
-    /// Slightly lifted surface for cards and sidebar panels.
-    static let surface = Color(white: 0.06)
+    /// Slightly lifted surface for cards and sidebar panels (cool near-black).
+    static let surface = Color(red: 0.043, green: 0.051, blue: 0.063)   // ≈ #0B0D10
+
+    /// Panel card fill — one step above `surface`, used behind data zones.
+    static let panel = Color(red: 0.055, green: 0.063, blue: 0.078)     // ≈ #0E1014
+
+    /// Hairline stroke around panel cards.
+    static let panelStroke = Color(white: 1.0).opacity(0.08)
 
     /// Subtle separator lines between zones.
-    static let separator = Color(white: 0.15)
+    static let separator = Color(white: 0.16)
+
+    // MARK: - Accent
+
+    /// Signature accent: Bitcoin orange. Used for selection, focus, and brand
+    /// identity — never for market direction (that's `candleUp`/`candleDown`).
+    static let accent = Color(red: 0.969, green: 0.576, blue: 0.102)    // #F7931A
+
+    /// Soft accent fill for selected-row backgrounds.
+    static let accentSoft = accent.opacity(0.16)
 
     // MARK: - Candle Colors
 
-    /// Up candle (close > open): bright green, visible at TV viewing distance.
-    static let candleUp   = Color(red: 0.0,  green: 0.784, blue: 0.325)  // #00C853
+    /// Up candle (close > open): refined market green — bright at TV distance
+    /// without the neon glare of a pure RGB green.
+    static let candleUp   = Color(red: 0.180, green: 0.741, blue: 0.522)  // #2EBD85
 
-    /// Down candle (close < open): bright red.
-    static let candleDown = Color(red: 1.0,  green: 0.090, blue: 0.267)  // #FF1744
+    /// Down candle (close < open): refined market red.
+    static let candleDown = Color(red: 0.965, green: 0.275, blue: 0.365)  // #F6465D
 
     /// Doji / unchanged candle: neutral gray.
     static let candleDoji = Color(white: 0.5)
@@ -37,15 +57,15 @@ enum AppTheme {
     // MARK: - Text Colors
 
     static let textPrimary   = Color.white
-    static let textSecondary = Color(white: 0.45)
-    static let textMuted     = Color(white: 0.30)
+    static let textSecondary = Color(white: 0.58)
+    static let textMuted     = Color(white: 0.38)
 
     // MARK: - Connection State Colors
 
-    static let stateConnected     = Color.green
+    static let stateConnected     = candleUp
     static let stateConnecting    = Color.yellow
     static let stateReconnecting  = Color.orange
-    static let stateDisconnected  = Color.red
+    static let stateDisconnected  = candleDown
 
     // MARK: - Typography
 
@@ -53,7 +73,11 @@ enum AppTheme {
     /// to fit price/qty columns without truncation at TV distance.
     static let dataFont: Font     = .system(size: 22, weight: .medium, design: .monospaced)
     /// Column header labels in tables.
-    static let dataHeaderFont: Font = .system(size: 18, weight: .semibold, design: .monospaced)
+    static let dataHeaderFont: Font = .system(size: 17, weight: .semibold, design: .monospaced)
+    /// Uppercase tracked micro-labels above panels ("ORDER BOOK", "TRADES").
+    static let microLabelFont: Font = .system(size: 16, weight: .bold)
+    /// Tracking applied to micro-labels.
+    static let microLabelTracking: CGFloat = 2.4
     /// Minimum font for body / secondary text — legible at 10 ft.
     static let bodyFont: Font     = .title3
     /// Prominent price displays.
@@ -85,19 +109,20 @@ enum AppTheme {
 
     // MARK: - Corner Radii
 
+    static let panelCornerRadius: CGFloat  = 14
     static let cardCornerRadius: CGFloat   = 12
     static let badgeCornerRadius: CGFloat  = 8
 
     // MARK: - STRC Dashboard
 
     /// ATM Active status badge: green — company is actively issuing shares.
-    static let strcATMActive      = Color(red: 0.0,  green: 0.784, blue: 0.325)  // same as candleUp
+    static let strcATMActive      = candleUp
     /// ATM Standby status badge: yellow — share price is below par value.
     static let strcATMStandby     = Color(red: 1.0,  green: 0.9,   blue: 0.0)
     /// Dark card surface for STRC dashboard sections.
-    static let strcCardBackground = Color(white: 0.1)
+    static let strcCardBackground = panel
     /// Blue accent for highlights and labels on the STRC tab.
-    static let strcAccent         = Color(red: 0.2,  green: 0.6,   blue: 1.0)
+    static let strcAccent         = Color(red: 0.35, green: 0.64, blue: 1.0)
 
     // MARK: - Alerts
 
@@ -113,7 +138,7 @@ enum AppTheme {
     static let axisFont: Font = .system(size: 18, weight: .medium, design: .monospaced)
 
     /// Subtle gray for axis tick labels — matches `textSecondary` lightness.
-    static let axisLabelColor: Color = Color(white: 0.45)
+    static let axisLabelColor: Color = Color(white: 0.55)
 
     /// Reserved width on the right edge for the price Y-axis panel.
     static let priceAxisWidth: CGFloat = 90

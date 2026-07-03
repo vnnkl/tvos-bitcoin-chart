@@ -92,3 +92,22 @@ struct OrderBookSnapshot: Sendable, Equatable, Codable {
         // timestamp is synthetic — not round-tripped to/from JSON
     }
 }
+
+// MARK: - Imbalance
+
+extension OrderBookSnapshot {
+
+    /// Bid share of the total visible liquidity, in 0…1.
+    ///
+    /// 1.0 = all resting quantity is on the bid side (buy pressure),
+    /// 0.0 = all on the ask side. Returns 0.5 for an empty book so gauges
+    /// render balanced rather than pinned to one side.
+    var bidImbalance: Double {
+        let bidTotal = bids.reduce(Decimal(0)) { $0 + $1.quantity }
+        let askTotal = asks.reduce(Decimal(0)) { $0 + $1.quantity }
+        let total = bidTotal + askTotal
+        guard total > 0 else { return 0.5 }
+        return NSDecimalNumber(decimal: bidTotal).doubleValue
+             / NSDecimalNumber(decimal: total).doubleValue
+    }
+}

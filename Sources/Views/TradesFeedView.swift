@@ -38,7 +38,7 @@ struct TradesFeedView: View {
     private var headerRow: some View {
         HStack(spacing: 0) {
             Text("TIME")
-                .frame(width: 90, alignment: .leading)
+                .frame(width: 118, alignment: .leading)
             Text("PRICE")
                 .frame(maxWidth: .infinity, alignment: .trailing)
             Text("QTY")
@@ -55,7 +55,7 @@ struct TradesFeedView: View {
         return HStack(spacing: 0) {
             Text(AppFormatters.tradeTime.string(from: trade.time))
                 .foregroundStyle(AppTheme.textSecondary)
-                .frame(width: 105, alignment: .leading)
+                .frame(width: 118, alignment: .leading)
                 .lineLimit(1)
             Text(formatPrice(trade.price))
                 .foregroundStyle(color)

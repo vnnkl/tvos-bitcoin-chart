@@ -32,7 +32,11 @@ final class STRCStore: @unchecked Sendable {
     }
 
     /// Replace the stored filings array with fresh data.
+    ///
+    /// The live feed mixes tickers (STRC + SATA `btc_update` rows). This store
+    /// backs the STRC dashboard, so other tickers are dropped here — otherwise
+    /// their BTC amounts would wrongly inflate the accumulation totals.
     func update(filings newFilings: [SECFiling]) {
-        filings = newFilings
+        filings = newFilings.filter { $0.ticker == "STRC" }
     }
 }

@@ -36,13 +36,17 @@ struct SettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: AppTheme.sectionSpacing) {
+            VStack(alignment: .leading, spacing: 28) {
                 // ── Page heading ──────────────────────────────────────────
-                Text("Settings")
-                    .font(AppTheme.dataHeaderFont)
-                    .fontWeight(.bold)
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .padding(.bottom, 8)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Settings")
+                        .font(.system(size: 40, weight: .bold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Text("DATA SOURCE · CHART · ALERTS")
+                        .font(.system(size: 15, weight: .semibold))
+                        .tracking(2.2)
+                        .foregroundStyle(AppTheme.textMuted)
+                }
 
                 // ── Section 1: Exchange ───────────────────────────────────
                 exchangeSection
@@ -58,7 +62,8 @@ struct SettingsView: View {
                 alertsSection
                     .focusSection()
             }
-            .padding(5)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 16)
         }
         .background(AppTheme.background)
         .onAppear {
@@ -77,9 +82,7 @@ struct SettingsView: View {
                 exchangeButton(id: "binance", label: "Binance", subtitle: "Live data via WebSocket")
                 exchangeButton(id: "stub",    label: "Stub (Demo)", subtitle: "Fixture data — no network required")
             }
-            .padding(20)
-            .background(AppTheme.strcCardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
+            .terminalPanel()
         }
     }
 
@@ -122,8 +125,9 @@ struct SettingsView: View {
             .padding(.vertical, 14)
             .background(
                 RoundedRectangle(cornerRadius: AppTheme.badgeCornerRadius)
-                    .fill(isSelected ? AppTheme.candleUp.opacity(0.15) : Color.clear)
+                    .fill(isSelected ? AppTheme.accentSoft : Color(white: 0.09))
             )
+            .focusHighlight(scale: 1.02)
         }
         .buttonStyle(.plain)
         .focusEffectDisabled()
@@ -147,9 +151,7 @@ struct SettingsView: View {
                     intervalButton(interval)
                 }
             }
-            .padding(20)
-            .background(AppTheme.strcCardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
+            .terminalPanel()
         }
     }
 
@@ -161,16 +163,7 @@ struct SettingsView: View {
             appSettings.defaultInterval = interval
             logger.info("SettingsView: default interval set to \(interval)")
         } label: {
-            Text(interval)
-                .font(AppTheme.bodyFont)
-                .monospacedDigit()
-                .fontWeight(isDefault ? .semibold : .regular)
-                .foregroundStyle(isDefault ? .black : AppTheme.textPrimary)
-                .frame(minWidth: 80, minHeight: 60)
-                .background(
-                    RoundedRectangle(cornerRadius: AppTheme.badgeCornerRadius)
-                        .fill(isDefault ? AppTheme.candleUp : Color(white: 0.25))
-                )
+            PillLabel(text: interval, isActive: isDefault, minWidth: 80)
         }
         .buttonStyle(.plain)
         .focusEffectDisabled()
@@ -216,9 +209,7 @@ struct SettingsView: View {
                     action: { indicatorSettings.showMACD.toggle() }
                 )
             }
-            .padding(20)
-            .background(AppTheme.strcCardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
+            .terminalPanel()
         }
     }
 
@@ -258,8 +249,9 @@ struct SettingsView: View {
             .padding(.vertical, 14)
             .background(
                 RoundedRectangle(cornerRadius: AppTheme.badgeCornerRadius)
-                    .fill(isEnabled ? color.opacity(0.16) : Color.clear)
+                    .fill(isEnabled ? color.opacity(0.14) : Color(white: 0.09))
             )
+            .focusHighlight(scale: 1.02)
         }
         .buttonStyle(.plain)
         .focusEffectDisabled()
@@ -274,22 +266,23 @@ struct SettingsView: View {
             }
 
             if alertStore.alerts.isEmpty {
-                Text("No alerts configured. Add one below to be notified when BTC crosses a price level.")
-                    .font(AppTheme.bodyFont)
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .padding(20)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(AppTheme.strcCardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
+                HStack(spacing: 14) {
+                    Image(systemName: "bell.slash")
+                        .font(.title3)
+                        .foregroundStyle(AppTheme.textMuted)
+                    Text("No alerts configured. Add one to be notified when BTC crosses a price level.")
+                        .font(AppTheme.bodyFont)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .terminalPanel(padding: 24)
             } else {
                 VStack(spacing: 8) {
                     ForEach(alertStore.alerts) { alert in
                         alertRow(alert)
                     }
                 }
-                .padding(12)
-                .background(AppTheme.strcCardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
+                .terminalPanel(padding: 12)
             }
         }
     }
@@ -309,14 +302,16 @@ struct SettingsView: View {
         } label: {
             Text(label)
                 .font(AppTheme.bodyFont)
-                .foregroundStyle(AppTheme.textPrimary)
+                .fontWeight(.semibold)
+                .foregroundStyle(direction == .above ? AppTheme.candleUp : AppTheme.candleDown)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
                 .background(
                     RoundedRectangle(cornerRadius: AppTheme.badgeCornerRadius)
-                        .fill(direction == .above ? AppTheme.candleUp.opacity(0.25)
-                                                  : AppTheme.candleDown.opacity(0.25))
+                        .fill(direction == .above ? AppTheme.candleUp.opacity(0.14)
+                                                  : AppTheme.candleDown.opacity(0.14))
                 )
+                .focusHighlight()
         }
         .buttonStyle(.plain)
         .focusEffectDisabled()
@@ -368,6 +363,7 @@ struct SettingsView: View {
                             RoundedRectangle(cornerRadius: 6)
                                 .fill(AppTheme.strcAccent.opacity(0.15))
                         )
+                        .focusHighlight(cornerRadius: 6)
                 }
                 .buttonStyle(.plain)
                 .focusEffectDisabled()
@@ -386,6 +382,7 @@ struct SettingsView: View {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(AppTheme.candleDown.opacity(0.12))
                     )
+                    .focusHighlight()
             }
             .buttonStyle(.plain)
             .focusEffectDisabled()
@@ -394,7 +391,7 @@ struct SettingsView: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color(white: 0.15))
+                .fill(Color(white: 0.09))
         )
     }
 
@@ -426,9 +423,14 @@ struct SettingsView: View {
 
     @ViewBuilder
     private func sectionHeader(_ title: String, icon: String) -> some View {
-        Label(title, systemImage: icon)
-            .font(AppTheme.dataHeaderFont)
-            .foregroundStyle(AppTheme.textPrimary)
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(AppTheme.accent)
+            Text(title)
+                .font(.system(size: 26, weight: .bold))
+                .foregroundStyle(AppTheme.textPrimary)
+        }
     }
 }
 

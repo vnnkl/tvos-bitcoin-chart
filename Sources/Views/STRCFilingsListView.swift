@@ -70,13 +70,17 @@ struct STRCFilingsListView: View {
             }
         }
         .background(AppTheme.strcCardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.panelCornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.panelCornerRadius)
+                .strokeBorder(AppTheme.panelStroke, lineWidth: 1)
+        )
     }
 
     // MARK: - Column headers
 
     private var columnHeaders: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 20) {
             Text("Filed Date")
                 .frame(width: 160, alignment: .leading)
             Text("Period")
@@ -98,7 +102,7 @@ struct STRCFilingsListView: View {
 
     @ViewBuilder
     private func filingRow(filing: SECFiling, isAlternate: Bool) -> some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 20) {
             Text(filing.filedDate)
                 .frame(width: 160, alignment: .leading)
                 .foregroundStyle(AppTheme.textSecondary)
